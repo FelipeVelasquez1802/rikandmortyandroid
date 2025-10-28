@@ -8,8 +8,7 @@ import org.junit.Test
 class CharacterTest {
 
     @Test
-    fun `create character with all properties should succeed`() {
-        // Given
+    fun `given all valid properties when creating character then returns character with correct values`() {
         val origin = CharacterLocationBuilder.aCharacterLocation()
             .withName("Earth (C-137)")
             .withUrl("https://rickandmortyapi.com/api/location/1")
@@ -23,14 +22,12 @@ class CharacterTest {
             "https://rickandmortyapi.com/api/episode/2"
         )
 
-        // When
         val character = CharacterBuilder.rickSanchez()
             .withOrigin(origin)
             .withLocation(location)
             .withEpisode(episodes)
             .build()
 
-        // Then
         assertEquals(1, character.id)
         assertEquals("Rick Sanchez", character.name)
         assertEquals(CharacterStatus.ALIVE, character.status)
@@ -46,44 +43,37 @@ class CharacterTest {
     }
 
     @Test
-    fun `character with DEAD status should be created correctly`() {
-        // When
+    fun `given DEAD status when creating character then returns character with DEAD status`() {
         val character = CharacterBuilder.mortySmith()
             .withStatus(CharacterStatus.DEAD)
             .build()
 
-        // Then
         assertEquals(CharacterStatus.DEAD, character.status)
         assertEquals("Morty Smith", character.name)
     }
 
     @Test
-    fun `character with UNKNOWN status should be created correctly`() {
-        // When
+    fun `given UNKNOWN status when creating character then returns character with UNKNOWN status`() {
         val character = CharacterBuilder.summerSmith()
             .withStatus(CharacterStatus.UNKNOWN)
             .withOrigin(CharacterLocationBuilder.anUnknownLocation().build())
             .withLocation(CharacterLocationBuilder.anUnknownLocation().build())
             .build()
 
-        // Then
         assertEquals(CharacterStatus.UNKNOWN, character.status)
         assertEquals(CharacterGender.FEMALE, character.gender)
     }
 
     @Test
-    fun `character copy with different name should preserve other properties`() {
-        // Given
+    fun `given character when copying with different name then preserves other properties`() {
         val character = CharacterBuilder.aCharacter()
             .withName("Rick")
-            .withImage("image.jpg")
-            .withUrl("url")
+            .withImage("https://example.com/image.jpg")
+            .withUrl("https://example.com/character/1")
             .build()
 
-        // When
         val copiedCharacter = character.copy(name = "Rick Sanchez")
 
-        // Then
         assertEquals("Rick Sanchez", copiedCharacter.name)
         assertEquals(character.id, copiedCharacter.id)
         assertEquals(character.status, copiedCharacter.status)
@@ -91,30 +81,28 @@ class CharacterTest {
     }
 
     @Test
-    fun `character equality should work correctly`() {
-        // Given
+    fun `given two characters with same properties when comparing then are equal`() {
         val origin = CharacterLocationBuilder.aCharacterLocation()
             .withName("Earth")
-            .withUrl("url")
+            .withUrl("https://example.com/location/1")
             .build()
 
         val character1 = CharacterBuilder.aCharacter()
             .withName("Rick")
             .withOrigin(origin)
             .withLocation(origin)
-            .withImage("image.jpg")
-            .withUrl("url")
+            .withImage("https://example.com/image.jpg")
+            .withUrl("https://example.com/character/1")
             .build()
 
         val character2 = CharacterBuilder.aCharacter()
             .withName("Rick")
             .withOrigin(origin)
             .withLocation(origin)
-            .withImage("image.jpg")
-            .withUrl("url")
+            .withImage("https://example.com/image.jpg")
+            .withUrl("https://example.com/character/1")
             .build()
 
-        // Then
         assertEquals(character1, character2)
     }
 }

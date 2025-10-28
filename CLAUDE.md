@@ -92,30 +92,60 @@ The `:domain` module has no dependencies, ensuring business logic remains platfo
 
 ### Project Structure
 ```
-├── app/                                  # Presentation layer (Android app)
+├── presentation/                         # Presentation layer (Android app)
 │   └── src/
 │       ├── main/
 │       │   ├── java/com/infinitum/labs/rickandmorty_android/
 │       │   │   ├── MainActivity.kt       # Main entry point
+│       │   │   ├── RickAndMortyApplication.kt  # Application class
+│       │   │   ├── character/            # Character feature
+│       │   │   │   └── list/             # Character list screen
+│       │   │   │       └── CharacterListViewModel.kt
+│       │   │   ├── di/                   # Dependency injection
+│       │   │   │   └── AppModule.kt      # Koin modules
 │       │   │   └── ui/theme/             # Material3 theme
-│       │   │       ├── Color.kt          # Color palette (Purple/Pink scheme)
-│       │   │       ├── Theme.kt          # Theme setup with dynamic colors
-│       │   │       └── Type.kt           # Typography configuration
+│       │   │       ├── Color.kt          # Color palette
+│       │   │       ├── Theme.kt          # Theme setup
+│       │   │       └── Type.kt           # Typography
 │       │   └── AndroidManifest.xml
-│       ├── test/                         # App unit tests
-│       └── androidTest/                  # App instrumented tests
+│       ├── test/                         # Unit tests
+│       └── androidTest/                  # Instrumented tests
 │
 ├── domain/                               # Business logic layer (pure Kotlin)
-│   └── src/main/java/com/infinitum/labs/domain/
-│       └── MyClass.kt                    # Placeholder for domain classes
+│   └── src/
+│       ├── main/java/com/infinitum/labs/domain/
+│       │   ├── common/                   # Shared domain components
+│       │   │   └── exception/            # Base exception hierarchy
+│       │   │       └── DomainException.kt
+│       │   └── character/                # Character bounded context
+│       │       ├── exception/            # Character-specific exceptions
+│       │       │   └── CharacterException.kt
+│       │       ├── model/                # Domain models
+│       │       │   ├── Character.kt      # Self-validating aggregate
+│       │       │   ├── CharacterLocation.kt
+│       │       │   ├── CharacterStatus.kt
+│       │       │   └── CharacterGender.kt
+│       │       ├── repository/           # Repository interfaces
+│       │       │   └── CharacterRepository.kt
+│       │       └── usecase/              # Use cases
+│       │           ├── GetCharactersUseCase.kt
+│       │           ├── GetCharacterByIdUseCase.kt
+│       │           └── SearchCharactersByNameUseCase.kt
+│       └── test/                         # Unit tests (80+ tests)
 │
 ├── data/                                 # Data layer (Android library)
 │   └── src/
 │       ├── main/
-│       │   ├── AndroidManifest.xml
-│       │   └── (empty - ready for repositories, data sources)
-│       ├── test/                         # Data unit tests
-│       └── androidTest/                  # Data instrumented tests
+│       │   ├── java/com/infinitum/labs/data/
+│       │   │   └── character/            # Character data implementation
+│       │   │       ├── exception/        # Data layer exceptions
+│       │   │       ├── repository/       # Repository implementations
+│       │   │       │   └── CharacterRepositoryImpl.kt
+│       │   │       ├── remote/           # Remote data sources
+│       │   │       └── mapper/           # DTO to Domain mappers
+│       │   └── AndroidManifest.xml
+│       ├── test/                         # Unit tests
+│       └── androidTest/                  # Instrumented tests
 │
 └── gradle/libs.versions.toml             # Centralized dependency versions
 ```
@@ -158,7 +188,83 @@ The `:domain` module has no dependencies, ensuring business logic remains platfo
 - Test runner: `androidx.test.runner.AndroidJUnitRunner`
 - Domain module can only have JUnit tests (no Android instrumentation)
 
+### Domain Exception Architecture
+
+The project implements a robust exception hierarchy following DDD principles:
+
+**Base Exceptions** (`domain/common/exception/`):
+- `DomainException`: Root of all domain exceptions, includes error codes
+- `ValidationException`: For entity/value object validation failures
+- `NotFoundException`: For missing resources (404 scenarios)
+- `RepositoryException`: For infrastructure/data access failures
+
+**Character Exceptions** (`domain/character/exception/`):
+All character exceptions inherit from `DomainException` and include unique error codes:
+
+**Validation Exceptions** (Model Invariants):
+- `InvalidCharacterId`: ID must be >= 1
+- `InvalidCharacterName`: Name cannot be blank
+- `InvalidCharacterSpecies`: Species cannot be blank
+- `InvalidCharacterImageUrl`: Image URL must be valid HTTP/HTTPS
+- `InvalidCharacterUrl`: URL must be valid HTTP/HTTPS
+- `InvalidCharacterEpisodes`: Must have at least 1 episode
+- `InvalidCharacterLocation`: Location name/URL validation
+- `InvalidCharacterCreatedDate`: Date must be valid ISO-8601
+
+**Use Case Exceptions**:
+- `InvalidCharacterPage`: Page number must be >= 1
+- `InvalidCharacterSearchQuery`: Search query cannot be blank
+
+**Repository Exceptions**:
+- `CharacterNotFound`: Character doesn't exist by ID
+- `CharactersNotFoundByName`: No characters found by name
+- `CharacterRepositoryUnavailable`: Catalog temporarily unavailable
+- `InvalidCharacterData`: Data corrupted or invalid format
+
+**Self-Validating Models**:
+All domain models validate themselves on construction:
+- `Character`: Validates ID, name, species, URLs, episodes, locations
+- `CharacterLocation`: Validates name and URL format
+
+### Testing Philosophy
+
+**Test Naming Convention**: `given [context] when [action] then [expected result]`
+
+Example:
+```kotlin
+@Test
+fun `given valid ID when creating character then returns character successfully`() {
+    val validId = 1
+
+    val character = CharacterBuilder.rickSanchez().withId(validId).build()
+
+    assertEquals(validId, character.id)
+}
+```
+
+**Test Principles**:
+- No comments (`// Given`, `// When`, `// Then`)
+- Test name describes the complete scenario
+- Clean, direct code
+- 80+ tests covering all domain logic
+- Each model has comprehensive validation tests
+
 ### Gradle Configuration
 - Version catalog: Edit `gradle/libs.versions.toml` to update dependency versions
 - All modules use Java 11 compatibility
 - ProGuard is disabled in debug builds, enabled (but not minified) in release builds
+
+## Domain-Driven Design (DDD)
+
+### Bounded Contexts
+- **Character**: Manages character entities, their properties, and related operations
+- **Common**: Shared kernel with base exceptions and utilities
+
+### Ubiquitous Language
+The code speaks the domain language:
+- Exceptions use business-oriented messages
+- Models enforce business rules through validation
+- Use cases encapsulate business operations
+
+### Aggregates
+- `Character`: Self-validating aggregate root that ensures all invariants are met on construction

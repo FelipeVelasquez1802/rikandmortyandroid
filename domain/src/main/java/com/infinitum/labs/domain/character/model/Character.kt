@@ -36,14 +36,16 @@ data class Character(
     private fun validate() {
         validateId()
         validateName()
+        validateSpecies()
         validateImage()
         validateUrl()
         validateEpisodes()
+        validateLocations()
     }
 
     /**
      * Validates that the character ID is valid.
-     * Business rule: Character IDs must be positive integers.
+     * Business rule: Character IDs must be positive integers (>= 1).
      */
     private fun validateId() {
         if (id < 1) {
@@ -57,33 +59,45 @@ data class Character(
      */
     private fun validateName() {
         if (name.isBlank()) {
-            throw CharacterException.InvalidCharacterData(
-                message = "Character name cannot be blank"
-            )
+            throw CharacterException.InvalidCharacterName(name = name)
+        }
+    }
+
+    /**
+     * Validates that the character species is valid.
+     * Business rule: Character species cannot be blank.
+     */
+    private fun validateSpecies() {
+        if (species.isBlank()) {
+            throw CharacterException.InvalidCharacterSpecies(species = species)
         }
     }
 
     /**
      * Validates that the character image URL is valid.
-     * Business rule: Character image URLs cannot be blank.
+     * Business rule: Character image URLs cannot be blank and should be valid URLs.
      */
     private fun validateImage() {
         if (image.isBlank()) {
-            throw CharacterException.InvalidCharacterData(
-                message = "Character image URL cannot be blank"
-            )
+            throw CharacterException.InvalidCharacterImageUrl(imageUrl = image)
+        }
+        // Optional: Add URL format validation
+        if (!image.startsWith("http://") && !image.startsWith("https://")) {
+            throw CharacterException.InvalidCharacterImageUrl(imageUrl = image)
         }
     }
 
     /**
      * Validates that the character URL is valid.
-     * Business rule: Character URLs cannot be blank.
+     * Business rule: Character URLs cannot be blank and should be valid URLs.
      */
     private fun validateUrl() {
         if (url.isBlank()) {
-            throw CharacterException.InvalidCharacterData(
-                message = "Character URL cannot be blank"
-            )
+            throw CharacterException.InvalidCharacterUrl(url = url)
+        }
+        // Optional: Add URL format validation
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            throw CharacterException.InvalidCharacterUrl(url = url)
         }
     }
 
@@ -93,8 +107,28 @@ data class Character(
      */
     private fun validateEpisodes() {
         if (episode.isEmpty()) {
-            throw CharacterException.InvalidCharacterData(
-                message = "Character must have appeared in at least one episode"
+            throw CharacterException.InvalidCharacterEpisodes(episodeCount = episode.size)
+        }
+    }
+
+    /**
+     * Validates that the character's origin and location are valid.
+     * Business rule: Location names cannot be blank.
+     */
+    private fun validateLocations() {
+        // Validate origin
+        if (origin.name.isBlank()) {
+            throw CharacterException.InvalidCharacterLocation(
+                locationType = "origin",
+                reason = "Origin name cannot be blank"
+            )
+        }
+
+        // Validate current location
+        if (location.name.isBlank()) {
+            throw CharacterException.InvalidCharacterLocation(
+                locationType = "location",
+                reason = "Location name cannot be blank"
             )
         }
     }
