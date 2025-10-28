@@ -6,9 +6,7 @@ plugins {
 
 android {
     namespace = "com.infinitum.labs.rickandmorty_android"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.infinitum.labs.rickandmorty_android"

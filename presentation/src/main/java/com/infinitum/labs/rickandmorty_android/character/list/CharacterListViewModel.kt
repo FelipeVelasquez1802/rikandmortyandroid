@@ -2,6 +2,7 @@ package com.infinitum.labs.rickandmorty_android.character.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.infinitum.labs.domain.character.exception.CharacterException
 import com.infinitum.labs.domain.character.repository.CharacterRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +42,7 @@ class CharacterListViewModel(
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            error = exception.message ?: "Unknown error occurred"
+                            error = exception.toUserFriendlyMessage()
                         )
                     }
                 }
@@ -58,5 +59,40 @@ class CharacterListViewModel(
     fun retry() {
         _state.update { it.copy(currentPage = 1, characters = emptyList()) }
         loadCharacters()
+    }
+
+    /**
+     * Converts Character domain exceptions to user-friendly error messages.
+     * Messages are focused on the Character model and user actions.
+     */
+    private fun Throwable.toUserFriendlyMessage(): String {
+        return when (this) {
+            // Character not found scenarios
+            is CharacterException.CharacterNotFound ->
+                "Character #${characterId} does not exist"
+
+            is CharacterException.CharactersNotFoundByName ->
+                "No characters found matching '$searchName'"
+
+            // Character validation errors
+            is CharacterException.InvalidCharacterId ->
+                "Invalid character ID: ${characterId}"
+
+            is CharacterException.InvalidCharacterPage ->
+                "Invalid page number: ${page}"
+
+            is CharacterException.InvalidCharacterSearchQuery ->
+                "Please enter a valid character name to search"
+
+            // Character repository/catalog errors
+            is CharacterException.CharacterRepositoryUnavailable ->
+                "Unable to load characters. Please check your connection and try again."
+
+            is CharacterException.InvalidCharacterData ->
+                "Character data is corrupted. Please try again later."
+
+            // Fallback for unexpected errors
+            else -> message ?: "An unexpected error occurred. Please try again."
+        }
     }
 }

@@ -50,7 +50,6 @@ class CharacterTest {
         // When
         val character = CharacterBuilder.mortySmith()
             .withStatus(CharacterStatus.DEAD)
-            .withEpisode(emptyList())
             .build()
 
         // Then
@@ -65,7 +64,6 @@ class CharacterTest {
             .withStatus(CharacterStatus.UNKNOWN)
             .withOrigin(CharacterLocationBuilder.anUnknownLocation().build())
             .withLocation(CharacterLocationBuilder.anUnknownLocation().build())
-            .withEpisode(emptyList())
             .build()
 
         // Then
@@ -80,7 +78,6 @@ class CharacterTest {
             .withName("Rick")
             .withImage("image.jpg")
             .withUrl("url")
-            .withEpisode(emptyList())
             .build()
 
         // When
@@ -107,7 +104,6 @@ class CharacterTest {
             .withLocation(origin)
             .withImage("image.jpg")
             .withUrl("url")
-            .withEpisode(emptyList())
             .build()
 
         val character2 = CharacterBuilder.aCharacter()
@@ -116,7 +112,6 @@ class CharacterTest {
             .withLocation(origin)
             .withImage("image.jpg")
             .withUrl("url")
-            .withEpisode(emptyList())
             .build()
 
         // Then
