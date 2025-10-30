@@ -155,6 +155,7 @@ The `:domain` module has no dependencies, ensuring business logic remains platfo
 - **Build System**: Gradle with Kotlin DSL
 - **Dependency Management**: Version catalogs (`gradle/libs.versions.toml`)
 - **Architecture**: Clean Architecture with multi-module separation
+- **Dependency Injection**: Koin 4.0.0
 
 ### Key Dependencies
 - **Compose BOM**: 2024.09.00 (version-aligned Compose dependencies)
@@ -162,6 +163,7 @@ The `:domain` module has no dependencies, ensuring business logic remains platfo
 - **Activity Compose**: 1.11.0
 - **Testing**: JUnit 4.13.2, AndroidX Test, Espresso, Compose UI Test
 - **Material**: Material3 (Compose), Material Components 1.10.0 (data module)
+- **Koin**: 4.0.0 (Dependency Injection)
 
 ## Development Notes
 
@@ -178,8 +180,13 @@ The `:domain` module has no dependencies, ensuring business logic remains platfo
 
 ### Compose UI (app module)
 - Uses `enableEdgeToEdge()` for modern edge-to-edge display
-- Theme: `RickAndMortyAndroidTheme` supports dark/light mode and dynamic colors (Android 12+)
-- Color scheme: Purple-based palette with tertiary pink accents
+- Theme: `RickAndMortyAndroidTheme` supports dark/light mode (dynamic colors disabled by default)
+- **Color scheme**: Rick and Morty themed palette
+  - 💚 **Verde Portal** (#00FF80) - Primary color for buttons and actions
+  - 🟢 **Verde Oscuro** (#007F4E) - Section backgrounds and containers
+  - ⚫ **Gris Oscuro** (#1A1A1A) - General background
+  - ⚪ **Blanco Humo** (#F5F5F5) - Primary text
+  - 💜 **Morado Cósmico** (#9B5DE5) - Accents and borders
 - Preview functions: Annotated with `@Preview` for Compose tooling
 
 ### Testing Strategy
@@ -187,6 +194,503 @@ The `:domain` module has no dependencies, ensuring business logic remains platfo
 - **Instrumented tests**: Place in `src/androidTest/` (app and data modules only)
 - Test runner: `androidx.test.runner.AndroidJUnitRunner`
 - Domain module can only have JUnit tests (no Android instrumentation)
+
+## Presentation Layer Architecture
+
+### Organization by Feature
+```
+presentation/src/main/java/com/infinitum/labs/rickandmorty_android/
+├── MainActivity.kt                    # Main entry point
+├── RickAndMortyApplication.kt         # Application class (Koin setup)
+├── NavigateApp.kt                     # Centralized navigation handler
+├── NavigationRoute.kt                 # Type-safe navigation routes
+├── splash/                            # Splash screen feature
+│   ├── SplashScreen.kt
+│   ├── SplashViewModel.kt
+│   ├── SplashWrapper.kt               # UI state wrapper
+│   └── SplashRouter.kt
+├── main/                              # Main screen with bottom navigation
+│   └── MainScreen.kt
+├── character/                         # Character feature module
+│   ├── state/                        # UI state wrappers
+│   │   ├── CharacterListWrapper.kt
+│   │   └── CharacterDetailWrapper.kt
+│   ├── list/                         # Character list screen
+│   │   ├── CharacterListViewModel.kt
+│   │   └── CharacterListScreen.kt
+│   ├── detail/                       # Character detail screen
+│   │   ├── CharacterDetailViewModel.kt
+│   │   └── CharacterDetailScreen.kt
+│   ├── view/                         # Composable views
+│   │   └── CharacterCard.kt
+│   └── router/                       # Navigation actions
+│       └── CharacterRouter.kt
+├── location/                          # Location feature module (Coming Soon)
+│   └── view/
+│       └── LocationListScreen.kt
+├── episode/                           # Episode feature module (Coming Soon)
+│   └── view/
+│       └── EpisodeListScreen.kt
+├── common/                            # Shared presentation components
+│   ├── viewmodel/                    # Base ViewModels
+│   │   └── BaseViewModel.kt
+│   └── router/                       # Base router interface
+│       └── BaseRouter.kt
+├── di/                                # Dependency injection
+│   └── AppModule.kt                  # Koin modules
+└── ui/theme/                          # Material3 theme
+    ├── Color.kt
+    ├── Theme.kt
+    └── Type.kt
+```
+
+### UI State Wrapper Pattern
+
+Each screen defines a sealed interface wrapper containing its UiState and Events:
+
+**Pattern Structure**:
+- Wrapper is a `sealed interface` marked as `internal`
+- Contains two nested components:
+  - `UiState` data class: holds all screen state (data, loading, errors)
+  - `Event` sealed interface: one-time events (navigation, snackbars)
+
+**Example**:
+```kotlin
+// character/state/CharacterListWrapper.kt
+internal sealed interface CharacterListWrapper {
+    data class UiState(
+        val characters: List<Character> = emptyList(),
+        val isLoading: Boolean = false,
+        val error: String? = null,
+        val currentPage: Int = 1,
+        val canLoadMore: Boolean = true
+    )
+
+    sealed interface Event {
+        data object NavToDetail : Event
+        data class ShowError(val message: String) : Event
+    }
+}
+```
+
+**Benefits**:
+- Clear namespace separation per screen
+- Type-safe state and events
+- Easy to find all state/events for a screen
+- Self-documenting code
+
+### BaseViewModel Pattern
+
+All ViewModels extend `BaseViewModel<StateType, EventType>`:
+
+**BaseViewModel Structure**:
+```kotlin
+internal abstract class BaseViewModel<StateType, EventType>(
+    initialState: StateType
+) : ViewModel() {
+    protected val _state: MutableStateFlow<StateType> = MutableStateFlow(initialState)
+    val state: StateFlow<StateType> = _state
+        .onStart { onStart() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = initialState,
+        )
+
+    protected val channelEvent: Channel<EventType> = Channel()
+    val channel: ReceiveChannel<EventType> = channelEvent
+
+    protected abstract fun onStart()
+}
+```
+
+**Key Features**:
+- Generic in both `StateType` and `EventType`
+- StateFlow with 5-second subscriber timeout
+- Channel for one-time UI events
+- `onStart()` lifecycle hook called when StateFlow starts collecting
+- `viewModelScope` for coroutine management
+
+**ViewModel Implementation**:
+```kotlin
+internal class CharacterListViewModel(
+    private val characterRepository: CharacterRepository
+) : BaseViewModel<CharacterListWrapper.UiState, CharacterListWrapper.Event>(
+    initialState = CharacterListWrapper.UiState()
+) {
+    init {
+        loadCharacters()
+    }
+
+    fun loadNextPage() {
+        if (!_state.value.canLoadMore || _state.value.isLoading) return
+        _state.update { it.copy(currentPage = it.currentPage + 1) }
+        loadCharacters()
+    }
+
+    private fun loadCharacters() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+
+            characterRepository.getCharacters(_state.value.currentPage)
+                .onSuccess { characters ->
+                    _state.update {
+                        it.copy(
+                            characters = if (it.currentPage == 1) characters else it.characters + characters,
+                            isLoading = false,
+                            canLoadMore = characters.isNotEmpty()
+                        )
+                    }
+                }
+                .onFailure { exception ->
+                    _state.update { it.copy(isLoading = false, error = exception.message) }
+                    channelEvent.send(CharacterListWrapper.Event.ShowError(exception.message))
+                }
+        }
+    }
+
+    override fun onStart() = Unit // Called when state flow collection starts
+}
+```
+
+**Best Practices**:
+- Mark ViewModels as `internal`
+- Use `_state.update { }` for state mutations
+- Use `channelEvent.send()` for one-time events
+- Handle errors by mapping domain exceptions to user-friendly messages
+- Keep business logic in domain layer (use cases)
+
+### Navigation Architecture
+
+The app uses **Jetpack Navigation with Type-Safe Routes** powered by `kotlinx.serialization`:
+
+**Type-Safe Routes with @Serializable**:
+```kotlin
+// NavigationRoute.kt
+internal sealed interface NavigationRoute {
+    @Serializable data object Splash : NavigationRoute
+    @Serializable data object Main : NavigationRoute
+    @Serializable data object CharacterList : NavigationRoute
+    @Serializable data class CharacterDetail(val characterId: Int) : NavigationRoute
+    @Serializable data object LocationList : NavigationRoute
+    @Serializable data object EpisodeList : NavigationRoute
+}
+```
+
+**Centralized Navigation** (NavigateApp.kt):
+```kotlin
+@Composable
+internal fun NavigateApp(
+    modifier: Modifier = Modifier,
+    navController: NavHostController = rememberNavController(),
+    startDestination: NavigationRoute = NavigationRoute.Splash
+) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        modifier = modifier
+    ) {
+        composable<NavigationRoute.Splash> {
+            SplashScreen(
+                onNavigate = { route ->
+                    when (route) {
+                        SplashRouter.NavigateToMain -> {
+                            navController.navigate(NavigationRoute.Main) {
+                                popUpTo(NavigationRoute.Splash) { inclusive = true }
+                            }
+                        }
+                    }
+                }
+            )
+        }
+
+        composable<NavigationRoute.Main> {
+            MainScreen(
+                onNavigate = { route ->
+                    when (route) {
+                        is CharacterRouter.NavigateToDetail -> {
+                            navController.navigate(NavigationRoute.CharacterDetail(route.characterId))
+                        }
+                        CharacterRouter.NavigateBack -> navController.popBackStack()
+                    }
+                }
+            )
+        }
+
+        composable<NavigationRoute.CharacterDetail> { backStackEntry ->
+            val route = backStackEntry.toRoute<NavigationRoute.CharacterDetail>()
+            CharacterDetailScreen(
+                characterId = route.characterId,
+                onNavigate = { navRoute ->
+                    when (navRoute) {
+                        CharacterRouter.NavigateBack -> navController.popBackStack()
+                        else -> {}
+                    }
+                }
+            )
+        }
+    }
+}
+```
+
+**Router Pattern for Features**:
+```kotlin
+// common/router/BaseRouter.kt
+internal interface BaseRouter
+
+// character/router/CharacterRouter.kt
+internal sealed class CharacterRouter : BaseRouter {
+    data class NavigateToDetail(val characterId: Int) : CharacterRouter()
+    data object NavigateBack : CharacterRouter()
+}
+```
+
+**Navigation Flow**:
+1. **Splash Screen** (2-second delay) → **Main Screen**
+2. **Main Screen** (Bottom Navigation with 3 tabs):
+   - Characters Tab → **Character List** → **Character Detail**
+   - Locations Tab → **Location List** (Coming Soon)
+   - Episodes Tab → **Episode List** (Coming Soon)
+
+**Benefits**:
+- Type-safe navigation with compile-time checks
+- Automatic argument serialization/deserialization
+- Centralized navigation logic in NavigateApp
+- Feature-specific routers for domain actions
+- Clear separation between navigation routes and feature actions
+
+### Composable Screens
+
+**Screen Pattern**:
+```kotlin
+@Composable
+internal fun CharacterListScreen(
+    viewModel: CharacterListViewModel = koinViewModel(),
+    onNavigate: (CharacterRouter) -> Unit = {}
+) {
+    val state by viewModel.state.collectAsState()
+
+    // Collect one-time events
+    LaunchedEffect(Unit) {
+        viewModel.channel.receiveAsFlow().collect { event ->
+            when (event) {
+                is CharacterListWrapper.Event.NavToDetail -> {
+                    onNavigate(CharacterRouter.Detail(event.characterId))
+                }
+                is CharacterListWrapper.Event.ShowError -> {
+                    // Show snackbar or toast
+                }
+            }
+        }
+    }
+
+    CharacterListContent(
+        state = state,
+        onLoadMore = viewModel::loadNextPage,
+        onRetry = viewModel::retry
+    )
+}
+
+@Composable
+private fun CharacterListContent(
+    state: CharacterListWrapper.UiState,
+    onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // UI implementation
+}
+```
+
+**Best Practices**:
+- Main screen function is `internal`
+- Inject ViewModel with `koinViewModel()`
+- Collect state with `collectAsState()`
+- Separate content into private `*Content` function for testability
+- Collect events in `LaunchedEffect`
+- Pass callbacks as method references (`viewModel::method`)
+
+**Infinite Scroll Pagination Pattern**:
+
+For implementing infinite scroll in LazyColumn/LazyRow, use `snapshotFlow` to observe scroll state:
+
+```kotlin
+@Composable
+internal fun CharacterListScreen(
+    viewModel: CharacterListViewModel = koinViewModel(),
+    onEvent: (CharacterListWrapper.Event) -> Unit = {},
+    onGoTo: (CharacterRouter) -> Unit = {}
+) {
+    val state by viewModel.state.collectAsState()
+    val listState = rememberLazyListState()
+
+    // Pagination trigger using snapshotFlow
+    LaunchedEffect(listState, state.canLoadMore, state.isLoading) {
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val totalItemsCount = layoutInfo.totalItemsCount
+            val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+
+            // Trigger when user is 3 items from the end
+            lastVisibleItemIndex >= totalItemsCount - 3
+        }
+        .collect { shouldLoadMore ->
+            if (shouldLoadMore && state.canLoadMore && !state.isLoading) {
+                onEvent(CharacterListWrapper.Event.LoadNextPage)
+            }
+        }
+    }
+
+    LazyColumn(state = listState) {
+        items(state.characters) { character ->
+            CharacterCard(character = character)
+        }
+
+        if (state.isLoading) {
+            item {
+                CircularProgressIndicator()
+            }
+        }
+    }
+}
+```
+
+**Key Points**:
+- Use `snapshotFlow` to observe `LazyListState.layoutInfo`
+- Check `lastVisibleItemIndex >= totalItemsCount - 3` to load next page
+- Add guards: `canLoadMore && !isLoading` to prevent duplicate requests
+- Show loading indicator at the end of the list during pagination
+- DO NOT use `derivedStateOf` for scroll observation (doesn't trigger properly)
+
+### Use Cases
+
+**Structure**:
+- One use case class per operation
+- Constructor injection for dependencies
+- All methods are suspend functions
+- Return `Result<T>` for error handling
+
+**Example**:
+```kotlin
+// domain/character/usecase/GetCharactersUseCase.kt
+class GetCharactersUseCase(
+    private val characterRepository: CharacterRepository
+) {
+    suspend operator fun invoke(page: Int): Result<List<Character>> {
+        if (page < 1) {
+            return Result.failure(InvalidCharacterPage(page))
+        }
+        return characterRepository.getCharacters(page)
+    }
+}
+```
+
+**Naming Convention**:
+- Pattern: `[Action][Entity]UseCase` (e.g., `GetCharactersUseCase`, `SearchCharactersByNameUseCase`)
+- Use `invoke()` operator for single-operation use cases
+- Place in `domain/[context]/usecase/`
+
+### Dependency Injection (Koin)
+
+**Module Structure**:
+```kotlin
+// presentation/di/AppModule.kt
+val appModule = module {
+    // ViewModels
+    viewModelOf(::CharacterListViewModel)
+
+    // Use Cases
+    singleOf(::GetCharactersUseCase)
+    singleOf(::GetCharacterByIdUseCase)
+    singleOf(::SearchCharactersByNameUseCase)
+
+    // Repositories
+    singleOf(::CharacterRepositoryImpl) bind CharacterRepository::class
+}
+```
+
+**Initialization** (in Application class):
+```kotlin
+class RickAndMortyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+
+        startKoin {
+            androidLogger()
+            androidContext(this@RickAndMortyApplication)
+            modules(appModule)
+        }
+    }
+}
+```
+
+**Best Practices**:
+- Use `viewModelOf` for ViewModels
+- Use `singleOf` with `bind` for repository implementations
+- Group dependencies by feature/bounded context
+- Use constructor injection in ViewModels and use cases
+
+### Data Layer Structure
+
+**Organization by Bounded Context**:
+```
+data/src/main/java/com/infinitum/labs/data/
+└── character/
+    ├── exception/                    # Data layer exceptions
+    │   └── DataException.kt
+    ├── remote/
+    │   ├── datasource/              # Remote data sources
+    │   │   └── CharacterRemoteDataSource.kt
+    │   └── dto/                     # Data Transfer Objects
+    │       ├── CharacterDto.kt
+    │       └── CharacterResponseDto.kt
+    ├── mapper/                       # DTO ↔ Domain converters
+    │   └── CharacterMapper.kt
+    └── repository/                   # Repository implementations
+        └── CharacterRepositoryImpl.kt
+```
+
+**DTOs (Data Transfer Objects)**:
+- Mark as `internal data class`
+- Use `@Serializable` for JSON serialization
+- Named with `Dto` suffix
+- Simple data classes without business logic
+
+**Mappers**:
+- Mark as `internal object` for stateless mappers
+- Methods: `toDto()`, `toDomain()`
+- Keep conversion logic simple
+- Example: `CharacterMapper.toDomain(dto: CharacterDto): Character`
+
+**Repository Implementation**:
+```kotlin
+internal class CharacterRepositoryImpl(
+    private val remoteDataSource: CharacterRemoteDataSource
+) : CharacterRepository {
+    override suspend fun getCharacters(page: Int): Result<List<Character>> {
+        return try {
+            val response = remoteDataSource.getCharacters(page)
+            val characters = response.results.map { CharacterMapper.toDomain(it) }
+            Result.success(characters)
+        } catch (e: Exception) {
+            Result.failure(CharacterRepositoryUnavailable(e.message))
+        }
+    }
+}
+```
+
+### Visibility Modifiers
+
+**Guidelines**:
+- **Presentation layer**: All classes, composables, and wrappers should be `internal`
+- **Data layer**: All classes, objects, and DTOs should be `internal`
+- **Domain layer**: `public` (accessible across modules)
+- Only expose what's necessary - prefer `internal` or `private` by default
+
+**Rationale**:
+- Prevents accidental exposure of implementation details
+- Clear module boundaries
+- Better encapsulation
 
 ### Domain Exception Architecture
 
@@ -248,6 +752,64 @@ fun `given valid ID when creating character then returns character successfully`
 - Clean, direct code
 - 80+ tests covering all domain logic
 - Each model has comprehensive validation tests
+
+**Test Data Builders**:
+- Use the Builder pattern for creating test data
+- Create builders in a `databuilder/` directory within the test package
+- Builders should have sensible default values
+- Use companion object factory methods with clear names (e.g., `buildCharacter()`)
+- Use inline return expressions for `build()` method
+
+Example:
+```kotlin
+// domain/src/test/.../character/model/databuilder/CharacterBuilder.kt
+class CharacterBuilder {
+    private var id: Int = 1
+    private var name: String = "Rick Sanchez"
+    private var status: CharacterStatus = CharacterStatus.ALIVE
+    private var species: String = "Human"
+    private var image: String = "https://example.com/rick.png"
+
+    fun withId(id: Int) = apply { this.id = id }
+    fun withName(name: String) = apply { this.name = name }
+    fun withStatus(status: CharacterStatus) = apply { this.status = status }
+
+    fun build() = Character(
+        id = id,
+        name = name,
+        status = status,
+        species = species,
+        image = image,
+        // ... other properties
+    )
+
+    companion object {
+        fun buildCharacter() = CharacterBuilder()
+        fun rickSanchez() = CharacterBuilder()
+        fun mortySmith() = CharacterBuilder()
+            .withId(2)
+            .withName("Morty Smith")
+    }
+}
+
+// Usage in tests:
+@Test
+fun `given valid character when saving then returns success`() {
+    val character = buildCharacter()
+        .withName("Summer Smith")
+        .withId(3)
+        .build()
+
+    assertEquals("Summer Smith", character.name)
+}
+```
+
+**Benefits**:
+- Readable test setup
+- Reusable across tests
+- Easy to modify for specific test cases
+- Reduces test data duplication
+- Clear intent with named factory methods
 
 ### Gradle Configuration
 - Version catalog: Edit `gradle/libs.versions.toml` to update dependency versions

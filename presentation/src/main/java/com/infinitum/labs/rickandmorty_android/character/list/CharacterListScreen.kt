@@ -32,9 +32,8 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CharacterListScreen(
-    viewModel: CharacterListViewModel = koinViewModel()
-) {
+fun CharacterListScreen() {
+    val viewModel: CharacterListViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 

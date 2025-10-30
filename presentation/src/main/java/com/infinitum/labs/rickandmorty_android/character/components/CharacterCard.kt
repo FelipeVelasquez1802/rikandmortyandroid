@@ -29,11 +29,13 @@ import com.infinitum.labs.domain.character.model.Character
 import com.infinitum.labs.domain.character.model.CharacterStatus
 
 @Composable
-fun CharacterCard(
+internal fun CharacterCard(
     character: Character,
+    onClick: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
+        onClick = { onClick(character.id) },
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),

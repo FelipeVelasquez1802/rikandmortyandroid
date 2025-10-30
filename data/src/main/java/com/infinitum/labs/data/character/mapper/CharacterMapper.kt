@@ -8,43 +8,46 @@ import com.infinitum.labs.domain.character.model.CharacterLocation
 import com.infinitum.labs.domain.character.model.CharacterStatus
 import java.util.Locale
 
-fun CharacterDto.toDomain(): Character {
-    return Character(
-        id = id,
-        name = name,
-        status = status.toCharacterStatus(),
-        species = species,
-        type = type,
-        gender = gender.toCharacterGender(),
-        origin = origin.toDomain(),
-        location = location.toDomain(),
-        image = image,
-        episode = episode,
-        url = url,
-        created = created
-    )
-}
+internal object CharacterMapper {
 
-fun CharacterLocationDto.toDomain(): CharacterLocation {
-    return CharacterLocation(
-        name = name,
-        url = url
-    )
-}
-
-fun String.toCharacterStatus(): CharacterStatus {
-    return when (this.uppercase(Locale.ROOT)) {
-        "ALIVE" -> CharacterStatus.ALIVE
-        "DEAD" -> CharacterStatus.DEAD
-        else -> CharacterStatus.UNKNOWN
+    fun toDomain(dto: CharacterDto): Character {
+        return Character(
+            id = dto.id,
+            name = dto.name,
+            status = toCharacterStatus(dto.status),
+            species = dto.species,
+            type = dto.type,
+            gender = toCharacterGender(dto.gender),
+            origin = toDomain(dto.origin),
+            location = toDomain(dto.location),
+            image = dto.image,
+            episode = dto.episode,
+            url = dto.url,
+            created = dto.created
+        )
     }
-}
 
-fun String.toCharacterGender(): CharacterGender {
-    return when (this.uppercase(Locale.ROOT)) {
-        "FEMALE" -> CharacterGender.FEMALE
-        "MALE" -> CharacterGender.MALE
-        "GENDERLESS" -> CharacterGender.GENDERLESS
-        else -> CharacterGender.UNKNOWN
+    fun toDomain(dto: CharacterLocationDto): CharacterLocation {
+        return CharacterLocation(
+            name = dto.name,
+            url = dto.url
+        )
+    }
+
+    private fun toCharacterStatus(status: String): CharacterStatus {
+        return when (status.uppercase(Locale.ROOT)) {
+            "ALIVE" -> CharacterStatus.ALIVE
+            "DEAD" -> CharacterStatus.DEAD
+            else -> CharacterStatus.UNKNOWN
+        }
+    }
+
+    private fun toCharacterGender(gender: String): CharacterGender {
+        return when (gender.uppercase(Locale.ROOT)) {
+            "FEMALE" -> CharacterGender.FEMALE
+            "MALE" -> CharacterGender.MALE
+            "GENDERLESS" -> CharacterGender.GENDERLESS
+            else -> CharacterGender.UNKNOWN
+        }
     }
 }
