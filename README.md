@@ -289,12 +289,12 @@ data class Character(...) {
 
 ### Reglas de Código
 
-1. **Tests**: Siempre agregar tests para nueva funcionalidad
-2. **Nomenclatura**: Usar `given-when-then` para tests
-3. **Validaciones**: Los modelos deben auto-validarse
-4. **Excepciones**: Crear excepciones específicas con error codes
+1. **Clean Code**: Código auto-documentado sin comentarios - Los nombres de clases, funciones y variables deben ser descriptivos
+2. **Tests**: Siempre agregar tests para nueva funcionalidad con nomenclatura `given-when-then`
+3. **Validaciones**: Los modelos deben auto-validarse en construcción
+4. **Excepciones**: Crear excepciones específicas con error codes únicos
 5. **DDD**: Respetar los bounded contexts establecidos
-6. **Clean Code**: Sin comentarios innecesarios, código auto-documentado
+6. **Arquitectura**: Mantener la separación de capas y dependencias unidireccionales
 
 ### Proceso
 
@@ -310,8 +310,8 @@ Este proyecto es de código abierto y está disponible bajo la licencia MIT.
 
 ## Contacto
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+- GitHub: [@FelipeVelasquez1802](https://github.com/FelipeVelasquez1802)
+- Email: felipe.diaz95@hotmail.com
 
 ## Agradecimientos
 
