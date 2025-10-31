@@ -32,13 +32,11 @@ import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CharacterListScreen(
-    viewModel: CharacterListViewModel = koinViewModel()
-) {
+fun CharacterListScreen() {
+    val viewModel: CharacterListViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
-    // Detect when reaching the end of the list for pagination
     val shouldLoadMore by remember {
         derivedStateOf {
             val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -98,7 +96,6 @@ fun CharacterListScreen(
                             CharacterCard(character = character)
                         }
 
-                        // Loading indicator at bottom for pagination
                         if (state.isLoading && state.characters.isNotEmpty()) {
                             item {
                                 Box(

@@ -12,32 +12,69 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = GreenPortal,
+    onPrimary = GrayDark,
+    primaryContainer = GreenDark,
+    onPrimaryContainer = WhiteSmoke,
+
+    secondary = PurpleCosmic,
+    onSecondary = WhiteSmoke,
+    secondaryContainer = PurpleCosmicVariant,
+    onSecondaryContainer = WhiteSmoke,
+
+    tertiary = GreenPortalVariant,
+    onTertiary = GrayDark,
+    tertiaryContainer = GreenDarkVariant,
+    onTertiaryContainer = WhiteSmoke,
+
+    background = GrayDark,
+    onBackground = WhiteSmoke,
+    surface = GrayDarkVariant,
+    onSurface = WhiteSmoke,
+    surfaceVariant = GrayDarkVariant,
+    onSurfaceVariant = WhiteSmokeVariant,
+
+    outline = PurpleCosmic,
+    outlineVariant = GreenDark,
+
+    error = ErrorRed,
+    onError = WhiteSmoke
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = GreenDark,
+    onPrimary = WhiteSmoke,
+    primaryContainer = GreenPortal,
+    onPrimaryContainer = GrayDark,
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    secondary = PurpleCosmicVariant,
+    onSecondary = WhiteSmoke,
+    secondaryContainer = PurpleCosmic,
+    onSecondaryContainer = GrayDark,
+
+    tertiary = GreenDarkVariant,
+    onTertiary = WhiteSmoke,
+    tertiaryContainer = GreenPortalVariant,
+    onTertiaryContainer = GrayDark,
+
+    background = WhiteSmoke,
+    onBackground = GrayDark,
+    surface = WhiteSmokeVariant,
+    onSurface = GrayDark,
+    surfaceVariant = WhiteSmokeVariant,
+    onSurfaceVariant = GrayDarkVariant,
+
+    outline = PurpleCosmic,
+    outlineVariant = GreenDark,
+
+    error = ErrorRed,
+    onError = WhiteSmoke
 )
 
 @Composable
 fun RickAndMortyAndroidTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

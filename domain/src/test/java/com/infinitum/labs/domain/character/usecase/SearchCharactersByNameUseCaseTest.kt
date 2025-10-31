@@ -4,6 +4,8 @@ import com.infinitum.labs.domain.character.exception.CharacterException
 import com.infinitum.labs.domain.character.model.Character
 import com.infinitum.labs.domain.character.model.builder.CharacterBuilder
 import com.infinitum.labs.domain.character.repository.CharacterRepository
+import com.infinitum.labs.domain.common.model.DataResult
+import com.infinitum.labs.domain.common.model.DataSource
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -30,14 +32,14 @@ class SearchCharactersByNameUseCaseTest {
         val expectedCharacters = listOf(
             CharacterBuilder.rickSanchez().build()
         )
-        mockRepository.charactersToReturn = Result.success(expectedCharacters)
+        mockRepository.charactersToReturn = Result.success(DataResult(expectedCharacters, DataSource.API))
 
         // When
         val result = useCase.invoke(searchName, page)
 
         // Then
         assertTrue(result.isSuccess)
-        assertEquals(expectedCharacters, result.getOrNull())
+        assertEquals(expectedCharacters, result.getOrNull()?.data)
         assertEquals(searchName, mockRepository.lastNameSearched)
         assertEquals(page, mockRepository.lastPageRequested)
     }
@@ -46,7 +48,7 @@ class SearchCharactersByNameUseCaseTest {
     fun `invoke with name only should use default page 1`() = runTest {
         // Given
         val searchName = "Morty"
-        mockRepository.charactersToReturn = Result.success(emptyList())
+        mockRepository.charactersToReturn = Result.success(DataResult(emptyList(), DataSource.API))
 
         // When
         useCase.invoke(searchName)
@@ -148,7 +150,7 @@ class SearchCharactersByNameUseCaseTest {
     fun `invoke with different search queries should work correctly`() = runTest {
         // Given
         val queries = listOf("Rick", "Morty", "Summer", "Beth")
-        mockRepository.charactersToReturn = Result.success(emptyList())
+        mockRepository.charactersToReturn = Result.success(DataResult(emptyList(), DataSource.API))
 
         // When
         queries.forEach { query ->
@@ -164,7 +166,7 @@ class SearchCharactersByNameUseCaseTest {
         // Given
         val searchName = "Rick"
         val pages = listOf(1, 2, 3)
-        mockRepository.charactersToReturn = Result.success(emptyList())
+        mockRepository.charactersToReturn = Result.success(DataResult(emptyList(), DataSource.API))
 
         // When
         pages.forEach { page ->
@@ -177,19 +179,19 @@ class SearchCharactersByNameUseCaseTest {
 
     // Fake repository for testing
     private class FakeCharacterRepository : CharacterRepository {
-        var charactersToReturn: Result<List<Character>> = Result.success(emptyList())
+        var charactersToReturn: Result<DataResult<List<Character>>> = Result.success(DataResult(emptyList(), DataSource.API))
         var lastNameSearched: String = ""
         var lastPageRequested: Int = 0
 
-        override suspend fun getCharacters(page: Int): Result<List<Character>> {
+        override suspend fun getCharacters(page: Int): Result<DataResult<List<Character>>> {
             throw NotImplementedError("Not used in these tests")
         }
 
-        override suspend fun getCharacter(id: Int): Result<Character> {
+        override suspend fun getCharacter(id: Int): Result<DataResult<Character>> {
             throw NotImplementedError("Not used in these tests")
         }
 
-        override suspend fun getCharactersByName(name: String, page: Int): Result<List<Character>> {
+        override suspend fun getCharactersByName(name: String, page: Int): Result<DataResult<List<Character>>> {
             lastNameSearched = name
             lastPageRequested = page
             return charactersToReturn

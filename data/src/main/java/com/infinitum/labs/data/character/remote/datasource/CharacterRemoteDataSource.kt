@@ -7,13 +7,13 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 
-interface CharacterRemoteDataSource {
+internal interface CharacterRemoteDataSource {
     suspend fun getCharacters(page: Int): CharacterResponseDto
     suspend fun getCharacter(id: Int): CharacterDto
     suspend fun getCharactersByName(name: String, page: Int): CharacterResponseDto
 }
 
-class CharacterRemoteDataSourceImpl(
+internal class CharacterRemoteDataSourceImpl(
     private val httpClient: HttpClient
 ) : CharacterRemoteDataSource {
 
