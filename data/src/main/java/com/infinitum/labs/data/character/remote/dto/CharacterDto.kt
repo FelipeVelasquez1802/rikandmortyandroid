@@ -3,7 +3,7 @@ package com.infinitum.labs.data.character.remote.dto
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class CharacterDto(
+internal data class CharacterDto(
     val id: Int,
     val name: String,
     val status: String,
