@@ -34,7 +34,6 @@ internal fun SplashScreen(
     val viewModel: SplashViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Collect one-time events
     LaunchedEffect(Unit) {
         viewModel.channel.receiveAsFlow().collect { event ->
             when (event) {
@@ -60,7 +59,6 @@ private fun SplashContent() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App Title
             Text(
                 text = "Rick and Morty",
                 style = MaterialTheme.typography.displayLarge,

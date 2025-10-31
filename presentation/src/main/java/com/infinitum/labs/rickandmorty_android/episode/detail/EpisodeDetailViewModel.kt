@@ -21,12 +21,10 @@ internal class EpisodeDetailViewModel(
 
     internal fun onEvent(event: EpisodeDetailWrapper.Event) {
         when (event) {
-            // User interaction events - handle in ViewModel
             EpisodeDetailWrapper.Event.Retry -> handleRetry()
-            EpisodeDetailWrapper.Event.NavigateBack -> { /* Handled in UI */ }
+            EpisodeDetailWrapper.Event.NavigateBack -> { }
 
-            // One-time events - handled in UI layer
-            is EpisodeDetailWrapper.Event.ShowError -> { /* Handled in UI */ }
+            is EpisodeDetailWrapper.Event.ShowError -> { }
         }
     }
 
@@ -59,9 +57,6 @@ internal class EpisodeDetailViewModel(
         }
     }
 
-    /**
-     * Converts Episode domain exceptions to user-friendly error messages.
-     */
     private fun Throwable.toUserFriendlyMessage(): String {
         return when (this) {
             is EpisodeException.EpisodeNotFound ->

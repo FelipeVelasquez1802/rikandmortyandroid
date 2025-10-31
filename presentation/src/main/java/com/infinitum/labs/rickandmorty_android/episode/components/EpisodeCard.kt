@@ -46,7 +46,6 @@ internal fun EpisodeCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Episode Icon
             Icon(
                 imageVector = Icons.Default.PlayArrow,
                 contentDescription = null,
@@ -60,12 +59,10 @@ internal fun EpisodeCard(
 
             Spacer(modifier = Modifier.padding(8.dp))
 
-            // Episode Info
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Episode code
                 Text(
                     text = episode.episode,
                     style = MaterialTheme.typography.labelMedium,
@@ -73,7 +70,6 @@ internal fun EpisodeCard(
                     fontWeight = FontWeight.Bold
                 )
 
-                // Episode name
                 Text(
                     text = episode.name,
                     style = MaterialTheme.typography.titleMedium,
@@ -82,7 +78,6 @@ internal fun EpisodeCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Air date
                 Text(
                     text = "Aired: ${episode.airDate}",
                     style = MaterialTheme.typography.bodySmall,
@@ -91,7 +86,6 @@ internal fun EpisodeCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Characters count
                 Text(
                     text = "${episode.characters.size} character(s)",
                     style = MaterialTheme.typography.bodySmall,

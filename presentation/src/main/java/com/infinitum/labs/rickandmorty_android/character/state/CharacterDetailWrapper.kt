@@ -10,11 +10,9 @@ internal sealed interface CharacterDetailWrapper {
     )
 
     sealed interface Event {
-        // User interaction events
         data object OnBackClick : Event
         data object OnRetryClick : Event
 
-        // One-time events (handled in UI layer)
         data object NavigateBack : Event
         data class ShowError(val message: String) : Event
     }

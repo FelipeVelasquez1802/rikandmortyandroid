@@ -21,13 +21,11 @@ internal class CharacterDetailViewModel(
 
     internal fun onEvent(event: CharacterDetailWrapper.Event) {
         when (event) {
-            // User interaction events - handle in ViewModel
             CharacterDetailWrapper.Event.OnBackClick -> handleBackClick()
             CharacterDetailWrapper.Event.OnRetryClick -> handleRetryClick()
 
-            // One-time events - handled in UI layer
-            CharacterDetailWrapper.Event.NavigateBack -> { /* Handled in UI */ }
-            is CharacterDetailWrapper.Event.ShowError -> { /* Handled in UI */ }
+            CharacterDetailWrapper.Event.NavigateBack -> { }
+            is CharacterDetailWrapper.Event.ShowError -> { }
         }
     }
 
@@ -46,10 +44,10 @@ internal class CharacterDetailViewModel(
             _state.update { it.copy(isLoading = true, error = null) }
 
             getCharacterByIdUseCase(characterId)
-                .onSuccess { character ->
+                .onSuccess { dataResult ->
                     _state.update {
                         it.copy(
-                            character = character,
+                            character = dataResult.data,
                             isLoading = false,
                             error = null
                         )
@@ -66,9 +64,6 @@ internal class CharacterDetailViewModel(
         }
     }
 
-    /**
-     * Converts Character domain exceptions to user-friendly error messages.
-     */
     private fun Throwable.toUserFriendlyMessage(): String {
         return when (this) {
             is CharacterException.CharacterNotFound ->

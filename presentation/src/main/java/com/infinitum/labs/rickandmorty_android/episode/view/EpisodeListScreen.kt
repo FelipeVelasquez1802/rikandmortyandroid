@@ -42,7 +42,6 @@ internal fun EpisodeListScreen(
     val viewModel: EpisodeListViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Collect one-time events (navigation, snackbars, etc.)
     LaunchedEffect(Unit) {
         viewModel.channel.receiveAsFlow().collect { event ->
             when (event) {
@@ -50,12 +49,10 @@ internal fun EpisodeListScreen(
                     onGoTo(EpisodeRouter.NavigateToDetail(event.episodeId))
                 }
                 is EpisodeListWrapper.Event.ShowError -> {
-                    // Could show a snackbar here
                 }
-                // User interaction events are handled in ViewModel
                 EpisodeListWrapper.Event.Retry,
                 EpisodeListWrapper.Event.LoadNextPage,
-                is EpisodeListWrapper.Event.OnEpisodeClick -> { /* Handled in ViewModel */ }
+                is EpisodeListWrapper.Event.OnEpisodeClick -> { }
             }
         }
     }
@@ -74,14 +71,12 @@ private fun EpisodeListContent(
 ) {
     val listState = rememberLazyListState()
 
-    // Pagination: observe scroll and load more items
     LaunchedEffect(listState, state.canLoadMore, state.isLoading) {
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
             val totalItemsCount = layoutInfo.totalItemsCount
             val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-            // Load when we are 3 items from the end
             lastVisibleItemIndex >= totalItemsCount - 3
         }
             .collect { shouldLoadMore ->
@@ -139,7 +134,6 @@ private fun EpisodeListContent(
                             )
                         }
 
-                        // Loading indicator at bottom for pagination
                         if (state.isLoading && state.episodes.isNotEmpty()) {
                             item {
                                 Box(

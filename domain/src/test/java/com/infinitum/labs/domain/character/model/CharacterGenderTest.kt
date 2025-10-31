@@ -7,25 +7,20 @@ class CharacterGenderTest {
 
     @Test
     fun `CharacterGender should have FEMALE value`() {
-        // When
         val gender = CharacterGender.FEMALE
 
-        // Then
         assertEquals("FEMALE", gender.name)
     }
 
     @Test
     fun `CharacterGender should have MALE value`() {
-        // When
         val gender = CharacterGender.MALE
 
-        // Then
         assertEquals("MALE", gender.name)
     }
 
     @Test
     fun `CharacterGender should have GENDERLESS value`() {
-        // When
         val gender = CharacterGender.GENDERLESS
 
         // Then

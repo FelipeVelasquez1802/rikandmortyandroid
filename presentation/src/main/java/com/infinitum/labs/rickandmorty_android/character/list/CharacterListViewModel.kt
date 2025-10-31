@@ -20,14 +20,12 @@ internal class CharacterListViewModel(
 
     internal fun onEvent(event: CharacterListWrapper.Event) {
         when (event) {
-            // User interaction events - handle in ViewModel
             CharacterListWrapper.Event.Retry -> handleRetry()
             CharacterListWrapper.Event.LoadNextPage -> handleLoadNextPage()
             is CharacterListWrapper.Event.OnCharacterClick -> handleCharacterClick(event.characterId)
 
-            // One-time events - handled in UI layer
-            is CharacterListWrapper.Event.NavigateToDetail -> { /* Handled in UI */ }
-            is CharacterListWrapper.Event.ShowError -> { /* Handled in UI */ }
+            is CharacterListWrapper.Event.NavigateToDetail -> { }
+            is CharacterListWrapper.Event.ShowError -> { }
         }
     }
 
@@ -62,13 +60,14 @@ internal class CharacterListViewModel(
             _state.update { it.copy(isLoading = true, error = null) }
 
             getCharactersUseCase(_state.value.currentPage)
-                .onSuccess { characters ->
+                .onSuccess { dataResult ->
                     _state.update {
                         it.copy(
-                            characters = if (it.currentPage == 1) characters else it.characters + characters,
+                            characters = if (it.currentPage == 1) dataResult.data else it.characters + dataResult.data,
                             isLoading = false,
                             error = null,
-                            canLoadMore = characters.isNotEmpty()
+                            canLoadMore = dataResult.data.isNotEmpty(),
+                            dataSource = dataResult.source
                         )
                     }
                 }
@@ -83,20 +82,14 @@ internal class CharacterListViewModel(
         }
     }
 
-    /**
-     * Converts Character domain exceptions to user-friendly error messages.
-     * Messages are focused on the Character model and user actions.
-     */
     private fun Throwable.toUserFriendlyMessage(): String {
         return when (this) {
-            // Character not found scenarios
             is CharacterException.CharacterNotFound ->
                 "Character #${characterId} does not exist"
 
             is CharacterException.CharactersNotFoundByName ->
                 "No characters found matching '$searchName'"
 
-            // Character validation errors
             is CharacterException.InvalidCharacterId ->
                 "Invalid character ID: ${characterId}"
 
@@ -106,14 +99,12 @@ internal class CharacterListViewModel(
             is CharacterException.InvalidCharacterSearchQuery ->
                 "Please enter a valid character name to search"
 
-            // Character repository/catalog errors
             is CharacterException.CharacterRepositoryUnavailable ->
                 "Unable to load characters. Please check your connection and try again."
 
             is CharacterException.InvalidCharacterData ->
                 "Character data is corrupted. Please try again later."
 
-            // Fallback for unexpected errors
             else -> message ?: "An unexpected error occurred. Please try again."
         }
     }

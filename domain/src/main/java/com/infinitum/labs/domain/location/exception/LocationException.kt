@@ -2,26 +2,12 @@ package com.infinitum.labs.domain.location.exception
 
 import com.infinitum.labs.domain.common.exception.DomainException
 
-/**
- * Sealed hierarchy of exceptions for Location domain operations.
- * These exceptions are focused on the Location model and business rules.
- * They speak the ubiquitous language of the Location domain.
- *
- * All location exceptions inherit from DomainException to maintain
- * consistency with the overall domain exception architecture.
- */
 sealed class LocationException(
     message: String,
     cause: Throwable? = null,
     errorCode: String? = null
 ) : DomainException(message, cause, errorCode) {
 
-    // ========== NOT FOUND EXCEPTIONS ==========
-
-    /**
-     * Thrown when a location with the specified ID does not exist in the system.
-     * Business rule: Location IDs must reference existing locations.
-     */
     data class LocationNotFound(
         val locationId: Int
     ) : LocationException(
@@ -29,10 +15,6 @@ sealed class LocationException(
         errorCode = "LOCATION_NOT_FOUND"
     )
 
-    /**
-     * Thrown when a location search by name yields no results.
-     * Business rule: Location searches may return empty results.
-     */
     data class LocationsNotFoundByName(
         val searchName: String
     ) : LocationException(
@@ -40,12 +22,6 @@ sealed class LocationException(
         errorCode = "LOCATIONS_NOT_FOUND_BY_NAME"
     )
 
-    // ========== VALIDATION EXCEPTIONS (for model invariants) ==========
-
-    /**
-     * Thrown when a location ID is invalid.
-     * Business rule: Location IDs must be positive integers (>= 1).
-     */
     data class InvalidLocationId(
         val locationId: Int
     ) : LocationException(
@@ -53,10 +29,6 @@ sealed class LocationException(
         errorCode = "INVALID_LOCATION_ID"
     )
 
-    /**
-     * Thrown when a location name is invalid.
-     * Business rule: Location names cannot be blank or empty.
-     */
     data class InvalidLocationName(
         val name: String
     ) : LocationException(
@@ -64,10 +36,6 @@ sealed class LocationException(
         errorCode = "INVALID_LOCATION_NAME"
     )
 
-    /**
-     * Thrown when a location type is invalid.
-     * Business rule: Location types cannot be blank.
-     */
     data class InvalidLocationType(
         val type: String
     ) : LocationException(
@@ -75,10 +43,6 @@ sealed class LocationException(
         errorCode = "INVALID_LOCATION_TYPE"
     )
 
-    /**
-     * Thrown when a location dimension is invalid.
-     * Business rule: Location dimensions cannot be blank.
-     */
     data class InvalidLocationDimension(
         val dimension: String
     ) : LocationException(
@@ -86,10 +50,6 @@ sealed class LocationException(
         errorCode = "INVALID_LOCATION_DIMENSION"
     )
 
-    /**
-     * Thrown when a location URL is invalid.
-     * Business rule: Location URLs cannot be blank and must be valid HTTP/HTTPS URLs.
-     */
     data class InvalidLocationUrl(
         val url: String
     ) : LocationException(
@@ -97,10 +57,6 @@ sealed class LocationException(
         errorCode = "INVALID_LOCATION_URL"
     )
 
-    /**
-     * Thrown when a location's created date is invalid.
-     * Business rule: Location creation dates must be valid ISO-8601 format.
-     */
     data class InvalidLocationCreatedDate(
         val created: String
     ) : LocationException(
@@ -108,12 +64,6 @@ sealed class LocationException(
         errorCode = "INVALID_LOCATION_CREATED_DATE"
     )
 
-    // ========== USE CASE / QUERY VALIDATION EXCEPTIONS ==========
-
-    /**
-     * Thrown when attempting to retrieve locations with invalid pagination.
-     * Business rule: Page numbers must be positive integers (>= 1).
-     */
     data class InvalidLocationPage(
         val page: Int
     ) : LocationException(
@@ -121,10 +71,6 @@ sealed class LocationException(
         errorCode = "INVALID_LOCATION_PAGE"
     )
 
-    /**
-     * Thrown when a location search query is invalid.
-     * Business rule: Search queries cannot be empty or blank.
-     */
     data class InvalidLocationSearchQuery(
         val query: String
     ) : LocationException(
@@ -132,12 +78,6 @@ sealed class LocationException(
         errorCode = "INVALID_LOCATION_SEARCH_QUERY"
     )
 
-    // ========== REPOSITORY / INFRASTRUCTURE EXCEPTIONS ==========
-
-    /**
-     * Thrown when the location repository/catalog is temporarily unavailable.
-     * Business rule: The location catalog should be accessible, but may be temporarily unavailable.
-     */
     data class LocationRepositoryUnavailable(
         override val message: String = "The location catalog is temporarily unavailable",
         override val cause: Throwable? = null
@@ -147,11 +87,6 @@ sealed class LocationException(
         errorCode = "LOCATION_REPOSITORY_UNAVAILABLE"
     )
 
-    /**
-     * Thrown when location data cannot be loaded due to corruption or invalid format.
-     * Business rule: Location data must be in a valid, readable format.
-     * This is typically used at the data layer when parsing fails.
-     */
     data class InvalidLocationData(
         override val message: String = "Location data is invalid or corrupted",
         override val cause: Throwable? = null

@@ -24,10 +24,6 @@ import com.infinitum.labs.rickandmorty_android.episode.view.EpisodeListScreen
 import com.infinitum.labs.rickandmorty_android.location.router.LocationRouter
 import com.infinitum.labs.rickandmorty_android.location.view.LocationListScreen
 
-/**
- * Main screen with bottom navigation bar.
- * Contains three main sections: Characters, Locations, Episodes
- */
 @Suppress("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 internal fun MainScreen(

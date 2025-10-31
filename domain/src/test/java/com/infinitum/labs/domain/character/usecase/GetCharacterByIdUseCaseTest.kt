@@ -4,6 +4,8 @@ import com.infinitum.labs.domain.character.exception.CharacterException
 import com.infinitum.labs.domain.character.model.Character
 import com.infinitum.labs.domain.character.model.builder.CharacterBuilder
 import com.infinitum.labs.domain.character.repository.CharacterRepository
+import com.infinitum.labs.domain.common.model.DataResult
+import com.infinitum.labs.domain.common.model.DataSource
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -27,14 +29,14 @@ class GetCharacterByIdUseCaseTest {
         // Given
         val characterId = 1
         val expectedCharacter = CharacterBuilder.rickSanchez().build()
-        mockRepository.characterToReturn = Result.success(expectedCharacter)
+        mockRepository.characterToReturn = Result.success(DataResult(expectedCharacter, DataSource.API))
 
         // When
         val result = useCase.invoke(characterId)
 
         // Then
         assertTrue(result.isSuccess)
-        assertEquals(expectedCharacter, result.getOrNull())
+        assertEquals(expectedCharacter, result.getOrNull()?.data)
         assertEquals(characterId, mockRepository.lastIdRequested)
     }
 
@@ -42,7 +44,7 @@ class GetCharacterByIdUseCaseTest {
     fun `invoke with different IDs should request correct characters`() = runTest {
         // Given
         val ids = listOf(1, 2, 3, 100)
-        mockRepository.characterToReturn = Result.success(CharacterBuilder.aCharacter().build())
+        mockRepository.characterToReturn = Result.success(DataResult(CharacterBuilder.aCharacter().build(), DataSource.API))
 
         // When & Then
         ids.forEach { id ->
@@ -111,19 +113,19 @@ class GetCharacterByIdUseCaseTest {
 
     // Fake repository for testing
     private class FakeCharacterRepository : CharacterRepository {
-        var characterToReturn: Result<Character> = Result.success(CharacterBuilder.aCharacter().build())
+        var characterToReturn: Result<DataResult<Character>> = Result.success(DataResult(CharacterBuilder.aCharacter().build(), DataSource.API))
         var lastIdRequested: Int = 0
 
-        override suspend fun getCharacters(page: Int): Result<List<Character>> {
+        override suspend fun getCharacters(page: Int): Result<DataResult<List<Character>>> {
             throw NotImplementedError("Not used in these tests")
         }
 
-        override suspend fun getCharacter(id: Int): Result<Character> {
+        override suspend fun getCharacter(id: Int): Result<DataResult<Character>> {
             lastIdRequested = id
             return characterToReturn
         }
 
-        override suspend fun getCharactersByName(name: String, page: Int): Result<List<Character>> {
+        override suspend fun getCharactersByName(name: String, page: Int): Result<DataResult<List<Character>>> {
             throw NotImplementedError("Not used in these tests")
         }
     }

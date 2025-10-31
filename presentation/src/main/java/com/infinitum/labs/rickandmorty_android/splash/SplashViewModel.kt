@@ -15,7 +15,6 @@ internal class SplashViewModel : BaseViewModel<SplashWrapper.UiState, SplashWrap
 
     private fun navigateToMain() {
         viewModelScope.launch {
-            // Espera 2 segundos antes de navegar
             delay(2000)
             channelEvent.send(SplashWrapper.Event.NavigateToMain)
         }

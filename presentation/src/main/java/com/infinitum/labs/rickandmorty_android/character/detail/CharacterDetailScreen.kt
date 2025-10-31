@@ -59,7 +59,6 @@ internal fun CharacterDetailScreen(
     val viewModel: CharacterDetailViewModel = koinViewModel(parameters = { parametersOf(characterId) })
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Collect one-time events
     LaunchedEffect(Unit) {
         viewModel.channel.receiveAsFlow().collect { event ->
             when (event) {
@@ -67,11 +66,9 @@ internal fun CharacterDetailScreen(
                     onNavigate(CharacterRouter.NavigateBack)
                 }
                 is CharacterDetailWrapper.Event.ShowError -> {
-                    // Could show a snackbar here
                 }
-                // User interaction events are handled in ViewModel
                 CharacterDetailWrapper.Event.OnBackClick,
-                CharacterDetailWrapper.Event.OnRetryClick -> { /* Handled in ViewModel */ }
+                CharacterDetailWrapper.Event.OnRetryClick -> { }
             }
         }
     }
@@ -149,7 +146,6 @@ private fun CharacterDetailView(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Character Image
         AsyncImage(
             model = character.image,
             contentDescription = character.name,
@@ -160,14 +156,12 @@ private fun CharacterDetailView(
             contentScale = ContentScale.Crop
         )
 
-        // Character Name
         Text(
             text = character.name,
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold
         )
 
-        // Status Row
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -190,7 +184,6 @@ private fun CharacterDetailView(
         DetailCard(title = "Origin", value = character.origin.name)
         DetailCard(title = "Last Location", value = character.location.name)
 
-        // Episodes
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(

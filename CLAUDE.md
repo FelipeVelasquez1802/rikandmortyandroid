@@ -164,6 +164,8 @@ The `:domain` module has no dependencies, ensuring business logic remains platfo
 - **Testing**: JUnit 4.13.2, AndroidX Test, Espresso, Compose UI Test
 - **Material**: Material3 (Compose), Material Components 1.10.0 (data module)
 - **Koin**: 4.0.0 (Dependency Injection)
+- **Ktor Client**: 3.0.3 (HTTP networking)
+- **Realm Kotlin**: 3.0.0 (Local NoSQL database for offline persistence)
 
 ## Development Notes
 
@@ -263,7 +265,8 @@ internal sealed interface CharacterListWrapper {
         val isLoading: Boolean = false,
         val error: String? = null,
         val currentPage: Int = 1,
-        val canLoadMore: Boolean = true
+        val canLoadMore: Boolean = true,
+        val dataSource: DataSource = DataSource.UNKNOWN
     )
 
     sealed interface Event {
@@ -662,22 +665,251 @@ data/src/main/java/com/infinitum/labs/data/
 - Keep conversion logic simple
 - Example: `CharacterMapper.toDomain(dto: CharacterDto): Character`
 
-**Repository Implementation**:
+**Repository Implementation with Cache-First Strategy**:
+
+The project uses **Realm 3.0.0** for local persistence with a cache-first strategy that includes background updates:
+
 ```kotlin
 internal class CharacterRepositoryImpl(
-    private val remoteDataSource: CharacterRemoteDataSource
+    private val remoteDataSource: CharacterRemoteDataSource,
+    private val localDataSource: CharacterLocalDataSource
 ) : CharacterRepository {
-    override suspend fun getCharacters(page: Int): Result<List<Character>> {
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override suspend fun getCharacters(page: Int): Result<DataResult<List<Character>>> {
+        // 1. Try cache first (instant response)
+        val cachedCharacters = try {
+            localDataSource.getCharacters(page)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        // 2. If cache has data, return immediately and update in background
+        if (cachedCharacters.isNotEmpty()) {
+            repositoryScope.launch {
+                try {
+                    val response = remoteDataSource.getCharacters(page)
+                    localDataSource.saveCharacters(response.results, page)
+                } catch (e: Exception) {
+                    // Ignore errors in background update
+                }
+            }
+            val characters = cachedCharacters.map { CharacterMapper.toDomain(it) }
+            return Result.success(DataResult(characters, DataSource.CACHE))
+        }
+
+        // 3. No cache - try API
         return try {
             val response = remoteDataSource.getCharacters(page)
             val characters = response.results.map { CharacterMapper.toDomain(it) }
-            Result.success(characters)
+            localDataSource.saveCharacters(response.results, page)
+            Result.success(DataResult(characters, DataSource.API))
         } catch (e: Exception) {
-            Result.failure(CharacterRepositoryUnavailable(e.message))
+            // 4. API failed - fallback to all cached data (offline mode)
+            val allCached = try {
+                localDataSource.getAllCharacters()
+            } catch (cacheError: Exception) {
+                emptyList()
+            }
+
+            if (allCached.isNotEmpty()) {
+                val characters = allCached.map { CharacterMapper.toDomain(it) }
+                Result.success(DataResult(characters, DataSource.CACHE))
+            } else {
+                Result.failure(e.toCharacterDomainException())
+            }
         }
     }
 }
 ```
+
+**Cache-First Strategy with Background Updates**:
+1. **Check Cache First**: Load from local Realm database (instant response)
+2. **Return Immediately**: If cache has data, return it with `DataSource.CACHE`
+3. **Update in Background**: Launch coroutine to update cache from API silently
+4. **No Cache**: If no cache, fetch from API and return with `DataSource.API`
+5. **Network Failure**: If API fails, try to return all cached data as fallback
+6. **Offline Support**: App works completely offline after first data load
+
+**Data Source Indicators**:
+- All repository methods return `Result<DataResult<T>>` wrapper
+- `DataResult` contains both the data and its source (`DataSource.CACHE` or `DataSource.API`)
+- UI displays a badge showing "Fresh" (API) or "Cached" (local) data
+- Helps users understand when they're viewing offline data
+
+**Benefits**:
+- Instant loading from cache (no waiting for network)
+- Always shows latest available data
+- Transparent background updates
+- Works offline after initial data load
+- Better UX with clear data source indicators
+- Stale-while-revalidate pattern for optimal performance
+
+### Local Persistence with Realm
+
+**Realm Configuration** (in DataModule):
+```kotlin
+// data/di/DataModule.kt
+val dataModule = module {
+    // Realm
+    single {
+        val config = RealmConfiguration.Builder(
+            schema = setOf(
+                RealmCharacter::class,
+                RealmLocation::class,
+                RealmEpisode::class
+            )
+        )
+            .name("rickandmorty.realm")
+            .schemaVersion(1)
+            .build()
+        Realm.open(config)
+    }
+    // ... other dependencies
+}
+```
+
+**Realm Models**:
+```kotlin
+// data/character/local/model/RealmCharacter.kt
+class RealmCharacter : RealmObject {
+    @PrimaryKey
+    var id: Int = 0
+    var name: String = ""
+    var status: String = ""
+    var species: String = ""
+    var type: String = ""
+    var gender: String = ""
+    var originName: String = ""
+    var originUrl: String = ""
+    var locationName: String = ""
+    var locationUrl: String = ""
+    var image: String = ""
+    var episodesJson: String = ""  // JSON array stored as string
+    var url: String = ""
+    var created: String = ""
+    var page: Int = 0              // For pagination
+    var timestamp: Long = 0L        // For cache management
+}
+```
+
+**Local Data Source Interface**:
+```kotlin
+// data/character/local/datasource/CharacterLocalDataSource.kt
+internal interface CharacterLocalDataSource {
+    suspend fun saveCharacters(characters: List<CharacterDto>, page: Int)
+    suspend fun getCharacters(page: Int): List<CharacterDto>
+    suspend fun getAllCharacters(): List<CharacterDto>
+    suspend fun getCharacter(id: Int): CharacterDto?
+    suspend fun clearAllCharacters()
+}
+```
+
+**Local Data Source Implementation**:
+```kotlin
+internal class CharacterLocalDataSourceImpl(
+    private val realm: Realm
+) : CharacterLocalDataSource {
+
+    override suspend fun saveCharacters(characters: List<CharacterDto>, page: Int) {
+        realm.write {
+            characters.forEach { character ->
+                val realmCharacter = RealmCharacter().apply {
+                    id = character.id
+                    name = character.name
+                    status = character.status
+                    species = character.species
+                    // ... other fields
+                    episodesJson = Json.encodeToString(character.episode)
+                    this.page = page
+                    timestamp = System.currentTimeMillis()
+                }
+                copyToRealm(realmCharacter, updatePolicy = UpdatePolicy.ALL)
+            }
+        }
+    }
+
+    override suspend fun getCharacters(page: Int): List<CharacterDto> {
+        return realm.query<RealmCharacter>("page == $0", page)
+            .find()
+            .map { it.toDto() }
+    }
+
+    override suspend fun getAllCharacters(): List<CharacterDto> {
+        return realm.query<RealmCharacter>()
+            .find()
+            .map { it.toDto() }
+    }
+
+    private fun RealmCharacter.toDto(): CharacterDto {
+        return CharacterDto(
+            id = id,
+            name = name,
+            status = status,
+            species = species,
+            // ... other fields
+            episode = Json.decodeFromString(episodesJson),
+            url = url,
+            created = created
+        )
+    }
+}
+```
+
+**Realm Key Concepts**:
+- **RealmObject**: Base class for all Realm models
+- **@PrimaryKey**: Marks the primary key field (required for upserts)
+- **UpdatePolicy.ALL**: Upsert policy (insert or update)
+- **realm.write {}**: Transaction block for write operations
+- **realm.query<T>()**: Type-safe query API
+- **JSON storage**: Complex fields (arrays) stored as JSON strings
+- **Pagination support**: `page` field for cache organization
+- **Timestamp**: For cache invalidation strategies
+
+**Data Module Dependency Injection**:
+```kotlin
+// data/di/DataModule.kt
+val dataModule = module {
+    // Realm Database
+    single {
+        val config = RealmConfiguration.Builder(
+            schema = setOf(
+                RealmCharacter::class,
+                RealmLocation::class,
+                RealmEpisode::class
+            )
+        )
+            .name("rickandmorty.realm")
+            .schemaVersion(1)
+            .build()
+        Realm.open(config)
+    }
+
+    // Character
+    singleOf(::CharacterRemoteDataSourceImpl) bind CharacterRemoteDataSource::class
+    singleOf(::CharacterLocalDataSourceImpl) bind CharacterLocalDataSource::class
+    singleOf(::CharacterRepositoryImpl) bind CharacterRepository::class
+
+    // Location
+    singleOf(::LocationRemoteDataSourceImpl) bind LocationRemoteDataSource::class
+    singleOf(::LocationLocalDataSourceImpl) bind LocationLocalDataSource::class
+    singleOf(::LocationRepositoryImpl) bind LocationRepository::class
+
+    // Episode
+    singleOf(::EpisodeRemoteDataSourceImpl) bind EpisodeRemoteDataSource::class
+    singleOf(::EpisodeLocalDataSourceImpl) bind EpisodeLocalDataSource::class
+    singleOf(::EpisodeRepositoryImpl) bind EpisodeRepository::class
+}
+```
+
+**Important Notes**:
+- Realm 3.0.0 uses Kotlin Multiplatform architecture
+- All Realm models must extend `RealmObject`
+- Arrays/Lists are stored as JSON strings (e.g., `episodesJson`)
+- Use `UpdatePolicy.ALL` for upsert behavior
+- Realm instance is a singleton managed by Koin
+- Local data sources store DTOs directly (same format as API)
+- Pagination supported through `page` field in Realm models
 
 ### Visibility Modifiers
 

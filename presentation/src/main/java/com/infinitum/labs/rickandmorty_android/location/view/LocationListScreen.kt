@@ -42,7 +42,6 @@ internal fun LocationListScreen(
     val viewModel: LocationListViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Collect one-time events (navigation, snackbars, etc.)
     LaunchedEffect(Unit) {
         viewModel.channel.receiveAsFlow().collect { event ->
             when (event) {
@@ -50,12 +49,10 @@ internal fun LocationListScreen(
                     onGoTo(LocationRouter.NavigateToDetail(event.locationId))
                 }
                 is LocationListWrapper.Event.ShowError -> {
-                    // Could show a snackbar here
                 }
-                // User interaction events are handled in ViewModel
                 LocationListWrapper.Event.Retry,
                 LocationListWrapper.Event.LoadNextPage,
-                is LocationListWrapper.Event.OnLocationClick -> { /* Handled in ViewModel */ }
+                is LocationListWrapper.Event.OnLocationClick -> { }
             }
         }
     }
@@ -74,14 +71,12 @@ private fun LocationListContent(
 ) {
     val listState = rememberLazyListState()
 
-    // Pagination: observe scroll and load more items
     LaunchedEffect(listState, state.canLoadMore, state.isLoading) {
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
             val totalItemsCount = layoutInfo.totalItemsCount
             val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-            // Load when we are 3 items from the end
             lastVisibleItemIndex >= totalItemsCount - 3
         }
             .collect { shouldLoadMore ->
@@ -139,7 +134,6 @@ private fun LocationListContent(
                             )
                         }
 
-                        // Loading indicator at bottom for pagination
                         if (state.isLoading && state.locations.isNotEmpty()) {
                             item {
                                 Box(
