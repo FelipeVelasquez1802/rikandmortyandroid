@@ -164,6 +164,8 @@ The `:domain` module has no dependencies, ensuring business logic remains platfo
 - **Testing**: JUnit 4.13.2, AndroidX Test, Espresso, Compose UI Test
 - **Material**: Material3 (Compose), Material Components 1.10.0 (data module)
 - **Koin**: 4.0.0 (Dependency Injection)
+- **Ktor Client**: 3.0.3 (HTTP networking)
+- **Couchbase Lite**: 3.2.0 (Local NoSQL database for offline persistence)
 
 ## Development Notes
 
@@ -662,22 +664,190 @@ data/src/main/java/com/infinitum/labs/data/
 - Keep conversion logic simple
 - Example: `CharacterMapper.toDomain(dto: CharacterDto): Character`
 
-**Repository Implementation**:
+**Repository Implementation with Offline-First Strategy**:
+
+The project uses **Couchbase Lite 3.2.0** for local persistence with an offline-first caching strategy:
+
 ```kotlin
 internal class CharacterRepositoryImpl(
-    private val remoteDataSource: CharacterRemoteDataSource
+    private val remoteDataSource: CharacterRemoteDataSource,
+    private val localDataSource: CharacterLocalDataSource
 ) : CharacterRepository {
     override suspend fun getCharacters(page: Int): Result<List<Character>> {
         return try {
+            // Try to fetch from network
             val response = remoteDataSource.getCharacters(page)
             val characters = response.results.map { CharacterMapper.toDomain(it) }
+
+            // Save to local cache for offline access
+            localDataSource.saveCharacters(response.results)
+
             Result.success(characters)
         } catch (e: Exception) {
-            Result.failure(CharacterRepositoryUnavailable(e.message))
+            // If network fails, try to get from local cache
+            return try {
+                val cachedCharacters = localDataSource.getCharacters()
+                if (cachedCharacters.isNotEmpty()) {
+                    val characters = cachedCharacters.map { CharacterMapper.toDomain(it) }
+                    Result.success(characters)
+                } else {
+                    Result.failure(e.toCharacterDomainException())
+                }
+            } catch (cacheError: Exception) {
+                Result.failure(e.toCharacterDomainException())
+            }
         }
     }
 }
 ```
+
+**Offline-First Cache Strategy**:
+1. **Primary**: Try to fetch data from the API (remote)
+2. **On Success**: Save the data to local cache (Couchbase Lite)
+3. **On Failure**: Fallback to local cache
+4. **If Cache Empty**: Return the original network error
+
+**Benefits**:
+- Works offline after initial data load
+- Automatic caching of successful API responses
+- Seamless fallback when network is unavailable
+- Faster subsequent loads from cache
+- Better user experience with offline support
+
+### Local Persistence with Couchbase Lite
+
+**Database Manager**:
+```kotlin
+// data/common/database/DatabaseManager.kt
+internal class DatabaseManager(private val context: Context) {
+    companion object {
+        private const val DATABASE_NAME = "rickandmorty"
+        const val COLLECTION_CHARACTERS = "characters"
+        const val COLLECTION_LOCATIONS = "locations"
+        const val COLLECTION_EPISODES = "episodes"
+    }
+
+    private var database: Database? = null
+
+    init {
+        CouchbaseLite.init(context)
+    }
+
+    @Synchronized
+    fun getDatabase(): Database {
+        return database ?: run {
+            val config = DatabaseConfiguration()
+            Database(DATABASE_NAME, config).also {
+                database = it
+            }
+        }
+    }
+
+    @Synchronized
+    fun close() {
+        database?.close()
+        database = null
+    }
+}
+```
+
+**Local Data Source Interface**:
+```kotlin
+// data/character/local/datasource/CharacterLocalDataSource.kt
+internal interface CharacterLocalDataSource {
+    suspend fun saveCharacters(characters: List<CharacterDto>)
+    suspend fun getCharacters(): List<CharacterDto>
+    suspend fun getCharacter(id: Int): CharacterDto?
+    suspend fun clearAllCharacters()
+}
+```
+
+**Local Data Source Implementation**:
+```kotlin
+internal class CharacterLocalDataSourceImpl(
+    private val databaseManager: DatabaseManager
+) : CharacterLocalDataSource {
+
+    private val database: Database
+        get() = databaseManager.getDatabase()
+
+    companion object {
+        private const val COLLECTION_PREFIX = "character_"
+        private const val TYPE_KEY = "type"
+        private const val TYPE_CHARACTER = "character"
+    }
+
+    override suspend fun saveCharacters(characters: List<CharacterDto>) {
+        characters.forEach { character ->
+            val documentId = "$COLLECTION_PREFIX${character.id}"
+            val document = MutableDocument(documentId)
+
+            document.setString(TYPE_KEY, TYPE_CHARACTER)
+            document.setInt("id", character.id)
+            document.setString("name", character.name)
+            // ... set all properties
+
+            database.save(document)
+        }
+    }
+
+    override suspend fun getCharacters(): List<CharacterDto> {
+        val query = QueryBuilder
+            .select(SelectResult.all())
+            .from(DataSource.database(database))
+            .where(Expression.property(TYPE_KEY).equalTo(Expression.string(TYPE_CHARACTER)))
+
+        val results = mutableListOf<CharacterDto>()
+        query.execute().use { resultSet ->
+            resultSet.forEach { result ->
+                val dict = result.getDictionary(0) ?: return@forEach
+                results.add(/* reconstruct CharacterDto from dict */)
+            }
+        }
+        return results
+    }
+}
+```
+
+**Couchbase Lite Key Concepts**:
+- **Document-based NoSQL**: Stores data as JSON documents
+- **MutableDocument**: Create/update documents
+- **QueryBuilder**: SQL-like query interface
+- **DataSource.database()**: Specifies database for queries
+- **Expression API**: Type-safe query expressions
+- **Document prefixes**: Organize data by type (e.g., "character_1", "location_5")
+- **Type field**: Filter documents by type in queries
+
+**Data Module Dependency Injection**:
+```kotlin
+// data/di/DataModule.kt
+val dataModule = module {
+    // Database
+    singleOf(::DatabaseManager)
+
+    // Character
+    singleOf(::CharacterRemoteDataSourceImpl) bind CharacterRemoteDataSource::class
+    singleOf(::CharacterLocalDataSourceImpl) bind CharacterLocalDataSource::class
+    singleOf(::CharacterRepositoryImpl) bind CharacterRepository::class
+
+    // Location
+    singleOf(::LocationRemoteDataSourceImpl) bind LocationRemoteDataSource::class
+    singleOf(::LocationLocalDataSourceImpl) bind LocationLocalDataSource::class
+    singleOf(::LocationRepositoryImpl) bind LocationRepository::class
+
+    // Episode
+    singleOf(::EpisodeRemoteDataSourceImpl) bind EpisodeRemoteDataSource::class
+    singleOf(::EpisodeLocalDataSourceImpl) bind EpisodeLocalDataSource::class
+    singleOf(::EpisodeRepositoryImpl) bind EpisodeRepository::class
+}
+```
+
+**Important Notes**:
+- Couchbase Lite 3.2.0 has some deprecated APIs but they still work correctly
+- `DataSource.database()` is deprecated but functional (warnings are expected)
+- `database.save()`, `database.getDocument()`, `database.delete()` are deprecated but safe to use
+- No need to suppress warnings - they don't affect functionality
+- Local data sources store DTOs directly (same format as API)
 
 ### Visibility Modifiers
 
