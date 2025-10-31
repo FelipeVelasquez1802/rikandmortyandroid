@@ -5,6 +5,7 @@ Una aplicación Android moderna construida con Kotlin, Jetpack Compose y Clean A
 ## Tabla de Contenidos
 
 - [Características](#características)
+- [Screenshots](#-screenshots)
 - [Arquitectura](#arquitectura)
 - [Tecnologías](#tecnologías)
 - [Estructura del Proyecto](#estructura-del-proyecto)
@@ -27,6 +28,52 @@ Una aplicación Android moderna construida con Kotlin, Jetpack Compose y Clean A
 - ✅ **80+ Tests Unitarios** con nomenclatura Given-When-Then
 - ✅ **Inyección de Dependencias** con Koin
 - ✅ **Kotlin Coroutines** para operaciones asíncronas
+
+## 📱 Screenshots
+
+### Lista de Personajes
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/02-character-list.png" width="250px" alt="Lista Fresh"/>
+      <br />
+      <sub><b>Lista con datos Fresh (API)</b></sub>
+    </td>
+  </tr>
+</table>
+
+### Detalle y Estados
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/02-character-detail.png" width="250px" alt="Detalle"/>
+      <br />
+      <sub><b>Detalle de personaje</b></sub>
+    </td>
+  </tr>
+</table>
+
+### Location
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/01-location-list.png" width="250px" alt="Splash"/>
+      <br />
+      <sub><b>Splash screen</b></sub>
+    </td>
+  </tr>
+</table>
+
+### Episodes
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/screenshots/01-episodes-list.png" width="250px" alt="Splash"/>
+      <br />
+      <sub><b>Splash screen</b></sub>
+    </td>
+  </tr>
+</table>
 
 ## Arquitectura
 

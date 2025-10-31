@@ -5,7 +5,7 @@
 /build
 /captures
 .externalNativeBuild
-.cxx
+.cxx4
 local.properties
 /.idea/
 /.kotlin/

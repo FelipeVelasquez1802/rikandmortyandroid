@@ -167,6 +167,30 @@ The `:domain` module has no dependencies, ensuring business logic remains platfo
 - **Ktor Client**: 3.0.3 (HTTP networking)
 - **Realm Kotlin**: 3.0.0 (Local NoSQL database for offline persistence)
 
+## Code Philosophy
+
+### Clean Code - Self-Documenting Code
+
+This project follows the principle of **self-documenting code**. The codebase contains **NO documentation comments** (no KDoc `/** ... */` or line comments `// ...`).
+
+**Why?**
+- Code should be clear enough to understand without comments
+- Names of classes, functions, and variables are descriptive
+- Structure and flow communicate intent
+- Tests document behavior through their names (Given-When-Then)
+- Comments become outdated; good code doesn't
+
+**Guidelines:**
+- ✅ Use descriptive names: `validateCharacterId()` instead of `validate()`
+- ✅ Small, focused functions that do one thing
+- ✅ Clear domain language in names
+- ✅ Tests as living documentation
+- ❌ No KDoc comments
+- ❌ No inline comments
+- ❌ No commented-out code
+
+**Exception:** External documentation files (README.md, CRITERIA.md, CLAUDE.md) are allowed and encouraged.
+
 ## Development Notes
 
 ### Working with Modules
