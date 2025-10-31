@@ -11,70 +11,52 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-/**
- * Rick and Morty Dark Color Scheme
- * Optimizado para modo oscuro con el tema de la serie
- */
 private val DarkColorScheme = darkColorScheme(
-    // Colores principales
-    primary = GreenPortal,              // 💚 Verde portal para botones y acciones principales
-    onPrimary = GrayDark,               // Texto sobre verde portal
-    primaryContainer = GreenDark,        // 🟢 Verde oscuro para contenedores
-    onPrimaryContainer = WhiteSmoke,     // Texto en contenedores
+    primary = GreenPortal,
+    onPrimary = GrayDark,
+    primaryContainer = GreenDark,
+    onPrimaryContainer = WhiteSmoke,
 
-    // Colores secundarios
-    secondary = PurpleCosmic,            // 💜 Morado cósmico para acciones secundarias
+    secondary = PurpleCosmic,
     onSecondary = WhiteSmoke,
     secondaryContainer = PurpleCosmicVariant,
     onSecondaryContainer = WhiteSmoke,
 
-    // Colores terciarios
     tertiary = GreenPortalVariant,
     onTertiary = GrayDark,
     tertiaryContainer = GreenDarkVariant,
     onTertiaryContainer = WhiteSmoke,
 
-    // Fondos y superficies
-    background = GrayDark,               // ⚫ Gris oscuro para fondo general
-    onBackground = WhiteSmoke,           // ⚪ Blanco humo para texto principal
-    surface = GrayDarkVariant,           // Superficie (cards, etc)
+    background = GrayDark,
+    onBackground = WhiteSmoke,
+    surface = GrayDarkVariant,
     onSurface = WhiteSmoke,
     surfaceVariant = GrayDarkVariant,
     onSurfaceVariant = WhiteSmokeVariant,
 
-    // Bordes y divisores
-    outline = PurpleCosmic,              // 💜 Morado para bordes
+    outline = PurpleCosmic,
     outlineVariant = GreenDark,
 
-    // Error
     error = ErrorRed,
     onError = WhiteSmoke
 )
 
-/**
- * Rick and Morty Light Color Scheme
- * Versión clara del tema (menos común pero disponible)
- */
 private val LightColorScheme = lightColorScheme(
-    // Colores principales
-    primary = GreenDark,                 // Verde oscuro como principal en tema claro
+    primary = GreenDark,
     onPrimary = WhiteSmoke,
-    primaryContainer = GreenPortal,      // Verde portal para contenedores
+    primaryContainer = GreenPortal,
     onPrimaryContainer = GrayDark,
 
-    // Colores secundarios
     secondary = PurpleCosmicVariant,
     onSecondary = WhiteSmoke,
     secondaryContainer = PurpleCosmic,
     onSecondaryContainer = GrayDark,
 
-    // Colores terciarios
     tertiary = GreenDarkVariant,
     onTertiary = WhiteSmoke,
     tertiaryContainer = GreenPortalVariant,
     onTertiaryContainer = GrayDark,
 
-    // Fondos y superficies
     background = WhiteSmoke,
     onBackground = GrayDark,
     surface = WhiteSmokeVariant,
@@ -82,11 +64,9 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = WhiteSmokeVariant,
     onSurfaceVariant = GrayDarkVariant,
 
-    // Bordes y divisores
     outline = PurpleCosmic,
     outlineVariant = GreenDark,
 
-    // Error
     error = ErrorRed,
     onError = WhiteSmoke
 )
@@ -94,7 +74,6 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun RickAndMortyAndroidTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color deshabilitado para usar siempre nuestra paleta Rick and Morty
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {

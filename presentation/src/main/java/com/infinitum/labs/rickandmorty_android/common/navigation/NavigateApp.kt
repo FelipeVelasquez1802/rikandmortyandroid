@@ -13,12 +13,6 @@ import com.infinitum.labs.rickandmorty_android.main.MainScreen
 import com.infinitum.labs.rickandmorty_android.splash.SplashRouter
 import com.infinitum.labs.rickandmorty_android.splash.SplashScreen
 
-/**
- * Main navigation component for the app.
- * Centralizes all navigation logic and handles routing between screens.
- *
- * Uses type-safe navigation with kotlinx.serialization.
- */
 @Composable
 internal fun NavigateApp(
     modifier: Modifier = Modifier,
@@ -30,7 +24,6 @@ internal fun NavigateApp(
         startDestination = startDestination,
         modifier = modifier
     ) {
-        // Splash Screen
         composable<NavigationRoute.Splash> {
             SplashScreen(onNavigate = { router ->
                 when (router) {
@@ -43,7 +36,6 @@ internal fun NavigateApp(
             })
         }
 
-        // Main Screen (with BottomNavigationBar)
         composable<NavigationRoute.Main> {
             MainScreen(onNavigate = { router ->
                 when (router) {
@@ -59,7 +51,6 @@ internal fun NavigateApp(
             })
         }
 
-        // Character Detail Screen
         composable<NavigationRoute.CharacterDetail> { backStackEntry ->
             val route: NavigationRoute.CharacterDetail = backStackEntry.toRoute()
             CharacterDetailScreen(

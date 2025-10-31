@@ -1,15 +1,21 @@
 package com.infinitum.labs.rickandmorty_android.character.view
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.infinitum.labs.domain.common.model.DataSource
 import com.infinitum.labs.rickandmorty_android.character.components.CharacterCard
 import com.infinitum.labs.rickandmorty_android.character.list.CharacterListViewModel
 import com.infinitum.labs.rickandmorty_android.character.router.CharacterRouter
@@ -44,7 +51,6 @@ internal fun CharacterListScreen(
     val viewModel: CharacterListViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Collect one-time events (navigation, snackbars, etc.)
     LaunchedEffect(Unit) {
         viewModel.channel.receiveAsFlow().collect { event ->
             when (event) {
@@ -52,12 +58,10 @@ internal fun CharacterListScreen(
                     onGoTo(CharacterRouter.NavigateToDetail(event.characterId))
                 }
                 is CharacterListWrapper.Event.ShowError -> {
-                    // Could show a snackbar here
                 }
-                // User interaction events are handled in ViewModel
                 CharacterListWrapper.Event.Retry,
                 CharacterListWrapper.Event.LoadNextPage,
-                is CharacterListWrapper.Event.OnCharacterClick -> { /* Handled in ViewModel */ }
+                is CharacterListWrapper.Event.OnCharacterClick -> { }
             }
         }
     }
@@ -76,14 +80,12 @@ private fun CharacterListContent(
 ) {
     val listState = rememberLazyListState()
 
-    // Paginación arreglada: observa el scroll y carga más items
     LaunchedEffect(listState, state.canLoadMore, state.isLoading) {
         snapshotFlow {
             val layoutInfo = listState.layoutInfo
             val totalItemsCount = layoutInfo.totalItemsCount
             val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
-            // Carga cuando estamos a 3 items del final
             lastVisibleItemIndex >= totalItemsCount - 3
         }
             .collect { shouldLoadMore ->
@@ -95,7 +97,17 @@ private fun CharacterListContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Rick and Morty") },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Rick and Morty")
+                        if (state.dataSource != DataSource.UNKNOWN && state.characters.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(12.dp))
+                            DataSourceBadge(dataSource = state.dataSource)
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -140,7 +152,6 @@ private fun CharacterListContent(
                             )
                         }
 
-                        // Loading indicator at bottom for pagination
                         if (state.isLoading && state.characters.isNotEmpty()) {
                             item {
                                 Box(
@@ -157,6 +168,40 @@ private fun CharacterListContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DataSourceBadge(
+    dataSource: DataSource,
+    modifier: Modifier = Modifier
+) {
+    val (label, color) = when (dataSource) {
+        DataSource.API -> Pair(
+            "Fresh",
+            MaterialTheme.colorScheme.tertiary
+        )
+        DataSource.CACHE -> Pair(
+            "Cached",
+            MaterialTheme.colorScheme.secondary
+        )
+        DataSource.UNKNOWN -> return // Don't show badge
+    }
+
+    Row(
+        modifier = modifier
+            .background(
+                color = color.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = color
+        )
     }
 }
 

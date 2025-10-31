@@ -20,14 +20,12 @@ internal class LocationListViewModel(
 
     internal fun onEvent(event: LocationListWrapper.Event) {
         when (event) {
-            // User interaction events - handle in ViewModel
             LocationListWrapper.Event.Retry -> handleRetry()
             LocationListWrapper.Event.LoadNextPage -> handleLoadNextPage()
             is LocationListWrapper.Event.OnLocationClick -> handleLocationClick(event.locationId)
 
-            // One-time events - handled in UI layer
-            is LocationListWrapper.Event.NavigateToDetail -> { /* Handled in UI */ }
-            is LocationListWrapper.Event.ShowError -> { /* Handled in UI */ }
+            is LocationListWrapper.Event.NavigateToDetail -> { }
+            is LocationListWrapper.Event.ShowError -> { }
         }
     }
 
@@ -77,20 +75,14 @@ internal class LocationListViewModel(
         }
     }
 
-    /**
-     * Converts Location domain exceptions to user-friendly error messages.
-     * Messages are focused on the Location model and user actions.
-     */
     private fun Throwable.toUserFriendlyMessage(): String {
         return when (this) {
-            // Location not found scenarios
             is LocationException.LocationNotFound ->
                 "Location #${locationId} does not exist"
 
             is LocationException.LocationsNotFoundByName ->
                 "No locations found matching '$searchName'"
 
-            // Location validation errors
             is LocationException.InvalidLocationId ->
                 "Invalid location ID: ${locationId}"
 
@@ -100,14 +92,12 @@ internal class LocationListViewModel(
             is LocationException.InvalidLocationSearchQuery ->
                 "Please enter a valid location name to search"
 
-            // Location repository/catalog errors
             is LocationException.LocationRepositoryUnavailable ->
                 "Unable to load locations. Please check your connection and try again."
 
             is LocationException.InvalidLocationData ->
                 "Location data is corrupted. Please try again later."
 
-            // Fallback for unexpected errors
             else -> message ?: "An unexpected error occurred. Please try again."
         }
     }

@@ -20,14 +20,12 @@ internal class EpisodeListViewModel(
 
     internal fun onEvent(event: EpisodeListWrapper.Event) {
         when (event) {
-            // User interaction events - handle in ViewModel
             EpisodeListWrapper.Event.Retry -> handleRetry()
             EpisodeListWrapper.Event.LoadNextPage -> handleLoadNextPage()
             is EpisodeListWrapper.Event.OnEpisodeClick -> handleEpisodeClick(event.episodeId)
 
-            // One-time events - handled in UI layer
-            is EpisodeListWrapper.Event.NavigateToDetail -> { /* Handled in UI */ }
-            is EpisodeListWrapper.Event.ShowError -> { /* Handled in UI */ }
+            is EpisodeListWrapper.Event.NavigateToDetail -> { }
+            is EpisodeListWrapper.Event.ShowError -> { }
         }
     }
 
@@ -77,20 +75,14 @@ internal class EpisodeListViewModel(
         }
     }
 
-    /**
-     * Converts Episode domain exceptions to user-friendly error messages.
-     * Messages are focused on the Episode model and user actions.
-     */
     private fun Throwable.toUserFriendlyMessage(): String {
         return when (this) {
-            // Episode not found scenarios
             is EpisodeException.EpisodeNotFound ->
                 "Episode #${episodeId} does not exist"
 
             is EpisodeException.EpisodesNotFoundByName ->
                 "No episodes found matching '$searchName'"
 
-            // Episode validation errors
             is EpisodeException.InvalidEpisodeId ->
                 "Invalid episode ID: ${episodeId}"
 
@@ -100,14 +92,12 @@ internal class EpisodeListViewModel(
             is EpisodeException.InvalidEpisodeSearchQuery ->
                 "Please enter a valid episode name to search"
 
-            // Episode repository/catalog errors
             is EpisodeException.EpisodeRepositoryUnavailable ->
                 "Unable to load episodes. Please check your connection and try again."
 
             is EpisodeException.InvalidEpisodeData ->
                 "Episode data is corrupted. Please try again later."
 
-            // Fallback for unexpected errors
             else -> message ?: "An unexpected error occurred. Please try again."
         }
     }

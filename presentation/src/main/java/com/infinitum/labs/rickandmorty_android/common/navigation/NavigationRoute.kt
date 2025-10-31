@@ -2,10 +2,6 @@ package com.infinitum.labs.rickandmorty_android.common.navigation
 
 import kotlinx.serialization.Serializable
 
-/**
- * Type-safe navigation routes using kotlinx.serialization.
- * All routes are marked as internal to maintain encapsulation.
- */
 internal sealed interface NavigationRoute {
 
     @Serializable

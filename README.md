@@ -17,6 +17,9 @@ Una aplicación Android moderna construida con Kotlin, Jetpack Compose y Clean A
 
 - ✅ **Clean Architecture** con separación en módulos
 - ✅ **Domain-Driven Design (DDD)** con bounded contexts
+- ✅ **Offline-First** con persistencia local en Realm
+- ✅ **Cache-First Strategy** con actualización en background
+- ✅ **Data Source Indicators** - muestra si los datos son de cache o API
 - ✅ **Jetpack Compose** para UI moderna y declarativa
 - ✅ **Material3** con soporte para tema claro/oscuro
 - ✅ **Self-Validating Domain Models** que garantizan invariantes
@@ -67,6 +70,13 @@ El proyecto sigue los principios de **Clean Architecture** con tres módulos pri
 - **Jetpack Compose** con BOM 2024.09.00
 - **Material3** para componentes modernos
 - **Coil** para carga de imágenes
+- **Badge de origen de datos** (Fresh/Cached) en AppBar
+
+### Data & Persistence
+- **Ktor 3.0.3** - Cliente HTTP moderno
+- **Realm 3.0.0** - Base de datos NoSQL local
+- **Kotlinx Serialization** para JSON
+- **Cache-First Strategy** con sync en background
 
 ### Architecture Components
 - **ViewModel & Lifecycle**

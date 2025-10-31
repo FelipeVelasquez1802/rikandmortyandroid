@@ -1,6 +1,7 @@
 package com.infinitum.labs.data.location.repository
 
 import com.infinitum.labs.data.location.exception.LocationDataException
+import com.infinitum.labs.data.location.local.datasource.LocationLocalDataSource
 import com.infinitum.labs.data.location.mapper.LocationMapper
 import com.infinitum.labs.data.location.remote.datasource.LocationRemoteDataSource
 import com.infinitum.labs.domain.location.exception.LocationException
@@ -12,25 +13,78 @@ import io.ktor.serialization.JsonConvertException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 internal class LocationRepositoryImpl(
-    private val remoteDataSource: LocationRemoteDataSource
+    private val remoteDataSource: LocationRemoteDataSource,
+    private val localDataSource: LocationLocalDataSource
 ) : LocationRepository {
 
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override suspend fun getLocations(page: Int): Result<List<Location>> {
+        val cachedLocations = try {
+            localDataSource.getLocations(page)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        if (cachedLocations.isNotEmpty()) {
+            repositoryScope.launch {
+                try {
+                    val response = remoteDataSource.getLocations(page)
+                    localDataSource.saveLocations(response.results, page)
+                } catch (e: Exception) {
+                }
+            }
+            return Result.success(cachedLocations.map { LocationMapper.toDomain(it) })
+        }
+
         return try {
             val response = remoteDataSource.getLocations(page)
             val locations = response.results.map { LocationMapper.toDomain(it) }
+            localDataSource.saveLocations(response.results, page)
             Result.success(locations)
         } catch (e: Exception) {
-            Result.failure(e.toLocationDomainException())
+            val allCached = try {
+                localDataSource.getAllLocations()
+            } catch (cacheError: Exception) {
+                emptyList()
+            }
+
+            if (allCached.isNotEmpty()) {
+                Result.success(allCached.map { LocationMapper.toDomain(it) })
+            } else {
+                Result.failure(e.toLocationDomainException())
+            }
         }
     }
 
     override suspend fun getLocation(id: Int): Result<Location> {
+        val cachedLocation = try {
+            localDataSource.getLocation(id)
+        } catch (e: Exception) {
+            null
+        }
+
+        if (cachedLocation != null) {
+            repositoryScope.launch {
+                try {
+                    val locationDto = remoteDataSource.getLocation(id)
+                    localDataSource.saveLocations(listOf(locationDto), page = 0)
+                } catch (e: Exception) {
+                }
+            }
+            return Result.success(LocationMapper.toDomain(cachedLocation))
+        }
+
         return try {
             val locationDto = remoteDataSource.getLocation(id)
             val location = LocationMapper.toDomain(locationDto)
+            localDataSource.saveLocations(listOf(locationDto), page = 0)
             Result.success(location)
         } catch (e: Exception) {
             Result.failure(e.toLocationDomainException(locationId = id))

@@ -52,16 +52,13 @@ internal fun EpisodeDetailScreen(
     val viewModel: EpisodeDetailViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Collect one-time events
     LaunchedEffect(Unit) {
         viewModel.channel.receiveAsFlow().collect { event ->
             when (event) {
                 is EpisodeDetailWrapper.Event.ShowError -> {
-                    // Could show a snackbar here
                 }
-                // User interaction events are handled in ViewModel
                 EpisodeDetailWrapper.Event.Retry,
-                EpisodeDetailWrapper.Event.NavigateBack -> { /* Handled in ViewModel */ }
+                EpisodeDetailWrapper.Event.NavigateBack -> { }
             }
         }
     }
@@ -142,7 +139,6 @@ private fun EpisodeDetailBody(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header with icon
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -174,7 +170,6 @@ private fun EpisodeDetailBody(
             }
         }
 
-        // Episode title card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -196,7 +191,6 @@ private fun EpisodeDetailBody(
             }
         }
 
-        // Information Cards
         InfoCard(
             title = "Air Date",
             value = episode.airDate

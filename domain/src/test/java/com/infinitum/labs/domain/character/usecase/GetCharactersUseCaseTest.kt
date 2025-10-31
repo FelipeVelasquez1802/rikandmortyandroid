@@ -1,8 +1,11 @@
 package com.infinitum.labs.domain.character.usecase
 
 import com.infinitum.labs.domain.character.exception.CharacterException
+import com.infinitum.labs.domain.character.model.Character
 import com.infinitum.labs.domain.character.model.builder.CharacterBuilder
 import com.infinitum.labs.domain.character.repository.CharacterRepository
+import com.infinitum.labs.domain.common.model.DataResult
+import com.infinitum.labs.domain.common.model.DataSource
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -29,21 +32,21 @@ class GetCharactersUseCaseTest {
             CharacterBuilder.rickSanchez().build(),
             CharacterBuilder.mortySmith().build()
         )
-        mockRepository.charactersToReturn = Result.success(expectedCharacters)
+        mockRepository.charactersToReturn = Result.success(DataResult(expectedCharacters, DataSource.API))
 
         // When
         val result = useCase.invoke(page)
 
         // Then
         assertTrue(result.isSuccess)
-        assertEquals(expectedCharacters, result.getOrNull())
+        assertEquals(expectedCharacters, result.getOrNull()?.data)
         assertEquals(page, mockRepository.lastPageRequested)
     }
 
     @Test
     fun `invoke with default page should use page 1`() = runTest {
         // Given
-        mockRepository.charactersToReturn = Result.success(emptyList())
+        mockRepository.charactersToReturn = Result.success(DataResult(emptyList(), DataSource.API))
 
         // When
         useCase.invoke()
@@ -98,7 +101,7 @@ class GetCharactersUseCaseTest {
     fun `invoke with multiple pages should work correctly`() = runTest {
         // Given
         val pages = listOf(1, 2, 3, 10)
-        mockRepository.charactersToReturn = Result.success(emptyList())
+        mockRepository.charactersToReturn = Result.success(DataResult(emptyList(), DataSource.API))
 
         // When
         pages.forEach { page ->
@@ -111,20 +114,20 @@ class GetCharactersUseCaseTest {
 
     // Fake repository for testing
     private class FakeCharacterRepository : CharacterRepository {
-        var charactersToReturn: Result<List<com.infinitum.labs.domain.character.model.Character>> =
-            Result.success(emptyList())
+        var charactersToReturn: Result<DataResult<List<Character>>> =
+            Result.success(DataResult(emptyList(), DataSource.API))
         var lastPageRequested: Int = 0
 
-        override suspend fun getCharacters(page: Int): Result<List<com.infinitum.labs.domain.character.model.Character>> {
+        override suspend fun getCharacters(page: Int): Result<DataResult<List<Character>>> {
             lastPageRequested = page
             return charactersToReturn
         }
 
-        override suspend fun getCharacter(id: Int): Result<com.infinitum.labs.domain.character.model.Character> {
+        override suspend fun getCharacter(id: Int): Result<DataResult<Character>> {
             throw NotImplementedError("Not used in these tests")
         }
 
-        override suspend fun getCharactersByName(name: String, page: Int): Result<List<com.infinitum.labs.domain.character.model.Character>> {
+        override suspend fun getCharactersByName(name: String, page: Int): Result<DataResult<List<Character>>> {
             throw NotImplementedError("Not used in these tests")
         }
     }

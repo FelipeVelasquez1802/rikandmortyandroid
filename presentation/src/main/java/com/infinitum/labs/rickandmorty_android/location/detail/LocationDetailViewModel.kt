@@ -21,12 +21,10 @@ internal class LocationDetailViewModel(
 
     internal fun onEvent(event: LocationDetailWrapper.Event) {
         when (event) {
-            // User interaction events - handle in ViewModel
             LocationDetailWrapper.Event.Retry -> handleRetry()
-            LocationDetailWrapper.Event.NavigateBack -> { /* Handled in UI */ }
+            LocationDetailWrapper.Event.NavigateBack -> { }
 
-            // One-time events - handled in UI layer
-            is LocationDetailWrapper.Event.ShowError -> { /* Handled in UI */ }
+            is LocationDetailWrapper.Event.ShowError -> { }
         }
     }
 
@@ -59,9 +57,6 @@ internal class LocationDetailViewModel(
         }
     }
 
-    /**
-     * Converts Location domain exceptions to user-friendly error messages.
-     */
     private fun Throwable.toUserFriendlyMessage(): String {
         return when (this) {
             is LocationException.LocationNotFound ->

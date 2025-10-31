@@ -1,6 +1,7 @@
 package com.infinitum.labs.data.episode.repository
 
 import com.infinitum.labs.data.episode.exception.EpisodeDataException
+import com.infinitum.labs.data.episode.local.datasource.EpisodeLocalDataSource
 import com.infinitum.labs.data.episode.mapper.EpisodeMapper
 import com.infinitum.labs.data.episode.remote.datasource.EpisodeRemoteDataSource
 import com.infinitum.labs.domain.episode.exception.EpisodeException
@@ -12,25 +13,78 @@ import io.ktor.serialization.JsonConvertException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 internal class EpisodeRepositoryImpl(
-    private val remoteDataSource: EpisodeRemoteDataSource
+    private val remoteDataSource: EpisodeRemoteDataSource,
+    private val localDataSource: EpisodeLocalDataSource
 ) : EpisodeRepository {
 
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override suspend fun getEpisodes(page: Int): Result<List<Episode>> {
+        val cachedEpisodes = try {
+            localDataSource.getEpisodes(page)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        if (cachedEpisodes.isNotEmpty()) {
+            repositoryScope.launch {
+                try {
+                    val response = remoteDataSource.getEpisodes(page)
+                    localDataSource.saveEpisodes(response.results, page)
+                } catch (e: Exception) {
+                }
+            }
+            return Result.success(cachedEpisodes.map { EpisodeMapper.toDomain(it) })
+        }
+
         return try {
             val response = remoteDataSource.getEpisodes(page)
             val episodes = response.results.map { EpisodeMapper.toDomain(it) }
+            localDataSource.saveEpisodes(response.results, page)
             Result.success(episodes)
         } catch (e: Exception) {
-            Result.failure(e.toEpisodeDomainException())
+            val allCached = try {
+                localDataSource.getAllEpisodes()
+            } catch (cacheError: Exception) {
+                emptyList()
+            }
+
+            if (allCached.isNotEmpty()) {
+                Result.success(allCached.map { EpisodeMapper.toDomain(it) })
+            } else {
+                Result.failure(e.toEpisodeDomainException())
+            }
         }
     }
 
     override suspend fun getEpisode(id: Int): Result<Episode> {
+        val cachedEpisode = try {
+            localDataSource.getEpisode(id)
+        } catch (e: Exception) {
+            null
+        }
+
+        if (cachedEpisode != null) {
+            repositoryScope.launch {
+                try {
+                    val episodeDto = remoteDataSource.getEpisode(id)
+                    localDataSource.saveEpisodes(listOf(episodeDto), page = 0)
+                } catch (e: Exception) {
+                }
+            }
+            return Result.success(EpisodeMapper.toDomain(cachedEpisode))
+        }
+
         return try {
             val episodeDto = remoteDataSource.getEpisode(id)
             val episode = EpisodeMapper.toDomain(episodeDto)
+            localDataSource.saveEpisodes(listOf(episodeDto), page = 0)
             Result.success(episode)
         } catch (e: Exception) {
             Result.failure(e.toEpisodeDomainException(episodeId = id))

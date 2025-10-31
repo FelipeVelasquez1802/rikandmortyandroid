@@ -54,16 +54,13 @@ internal fun LocationDetailScreen(
     val viewModel: LocationDetailViewModel = koinViewModel()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Collect one-time events
     LaunchedEffect(Unit) {
         viewModel.channel.receiveAsFlow().collect { event ->
             when (event) {
                 is LocationDetailWrapper.Event.ShowError -> {
-                    // Could show a snackbar here
                 }
-                // User interaction events are handled in ViewModel
                 LocationDetailWrapper.Event.Retry,
-                LocationDetailWrapper.Event.NavigateBack -> { /* Handled in ViewModel */ }
+                LocationDetailWrapper.Event.NavigateBack -> { }
             }
         }
     }
@@ -144,7 +141,6 @@ private fun LocationDetailBody(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header with icon
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -175,7 +171,6 @@ private fun LocationDetailBody(
             }
         }
 
-        // Information Cards
         InfoCard(
             title = "Type",
             value = location.type.ifEmpty { "Unknown" }

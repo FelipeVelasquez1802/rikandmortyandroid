@@ -1,47 +1,106 @@
 package com.infinitum.labs.data.character.repository
 
 import com.infinitum.labs.data.character.exception.CharacterDataException
+import com.infinitum.labs.data.character.local.datasource.CharacterLocalDataSource
 import com.infinitum.labs.data.character.mapper.CharacterMapper
 import com.infinitum.labs.data.character.remote.datasource.CharacterRemoteDataSource
 import com.infinitum.labs.domain.character.exception.CharacterException
 import com.infinitum.labs.domain.character.model.Character
 import com.infinitum.labs.domain.character.repository.CharacterRepository
+import com.infinitum.labs.domain.common.model.DataResult
+import com.infinitum.labs.domain.common.model.DataSource
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.serialization.JsonConvertException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 internal class CharacterRepositoryImpl(
-    private val remoteDataSource: CharacterRemoteDataSource
+    private val remoteDataSource: CharacterRemoteDataSource,
+    private val localDataSource: CharacterLocalDataSource
 ) : CharacterRepository {
 
-    override suspend fun getCharacters(page: Int): Result<List<Character>> {
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    override suspend fun getCharacters(page: Int): Result<DataResult<List<Character>>> {
+        val cachedCharacters = try {
+            localDataSource.getCharacters(page)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        if (cachedCharacters.isNotEmpty()) {
+            repositoryScope.launch {
+                try {
+                    val response = remoteDataSource.getCharacters(page)
+                    localDataSource.saveCharacters(response.results, page)
+                } catch (e: Exception) {
+                }
+            }
+            val characters = cachedCharacters.map { CharacterMapper.toDomain(it) }
+            return Result.success(DataResult(characters, DataSource.CACHE))
+        }
+
         return try {
             val response = remoteDataSource.getCharacters(page)
             val characters = response.results.map { CharacterMapper.toDomain(it) }
-            Result.success(characters)
+            localDataSource.saveCharacters(response.results, page)
+            Result.success(DataResult(characters, DataSource.API))
         } catch (e: Exception) {
-            Result.failure(e.toCharacterDomainException())
+            val allCached = try {
+                localDataSource.getAllCharacters()
+            } catch (cacheError: Exception) {
+                emptyList()
+            }
+
+            if (allCached.isNotEmpty()) {
+                val characters = allCached.map { CharacterMapper.toDomain(it) }
+                Result.success(DataResult(characters, DataSource.CACHE))
+            } else {
+                Result.failure(e.toCharacterDomainException())
+            }
         }
     }
 
-    override suspend fun getCharacter(id: Int): Result<Character> {
+    override suspend fun getCharacter(id: Int): Result<DataResult<Character>> {
+        val cachedCharacter = try {
+            localDataSource.getCharacter(id)
+        } catch (e: Exception) {
+            null
+        }
+
+        if (cachedCharacter != null) {
+            repositoryScope.launch {
+                try {
+                    val characterDto = remoteDataSource.getCharacter(id)
+                    localDataSource.saveCharacters(listOf(characterDto), page = 0)
+                } catch (e: Exception) {
+                }
+            }
+            val character = CharacterMapper.toDomain(cachedCharacter)
+            return Result.success(DataResult(character, DataSource.CACHE))
+        }
+
         return try {
             val characterDto = remoteDataSource.getCharacter(id)
             val character = CharacterMapper.toDomain(characterDto)
-            Result.success(character)
+            localDataSource.saveCharacters(listOf(characterDto), page = 0)
+            Result.success(DataResult(character, DataSource.API))
         } catch (e: Exception) {
             Result.failure(e.toCharacterDomainException(characterId = id))
         }
     }
 
-    override suspend fun getCharactersByName(name: String, page: Int): Result<List<Character>> {
+    override suspend fun getCharactersByName(name: String, page: Int): Result<DataResult<List<Character>>> {
         return try {
             val response = remoteDataSource.getCharactersByName(name, page)
             val characters = response.results.map { CharacterMapper.toDomain(it) }
-            Result.success(characters)
+            Result.success(DataResult(characters, DataSource.API))
         } catch (e: Exception) {
             Result.failure(e.toCharacterDomainException(searchName = name))
         }

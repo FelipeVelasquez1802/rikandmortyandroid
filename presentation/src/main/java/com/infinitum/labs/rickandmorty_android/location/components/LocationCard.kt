@@ -48,7 +48,6 @@ internal fun LocationCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Location Icon
             Icon(
                 imageVector = Icons.Default.Place,
                 contentDescription = null,
@@ -62,7 +61,6 @@ internal fun LocationCard(
 
             Spacer(modifier = Modifier.padding(8.dp))
 
-            // Location Info
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -75,7 +73,6 @@ internal fun LocationCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Type
                 if (location.type.isNotEmpty()) {
                     Text(
                         text = "Type: ${location.type}",
@@ -86,7 +83,6 @@ internal fun LocationCard(
                     )
                 }
 
-                // Dimension
                 if (location.dimension.isNotEmpty()) {
                     Text(
                         text = "Dimension: ${location.dimension}",
@@ -97,7 +93,6 @@ internal fun LocationCard(
                     )
                 }
 
-                // Residents count
                 Text(
                     text = "${location.residents.size} resident(s)",
                     style = MaterialTheme.typography.bodySmall,
